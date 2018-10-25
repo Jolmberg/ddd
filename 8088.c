@@ -145,6 +145,16 @@ int iapx88_step(struct iapx88 *cpu)
     }
 }
 
+int run_bus(iapx88 *cpu, int cycles) {
+    int c = 0;
+    switch (cpu->control_bus_state) {
+    case BUS_FETCH:
+    case BUS_MEMREAD:
+	switch (cpu->bus_state) {
+	case BUS_T3:
+	    cpu->data_pins = read_memory(cpu->address_pins); // blah
+}
+
 int biu_prefetch(struct iapx88 *cpu, int max_cycles)
 {
     // BLAH

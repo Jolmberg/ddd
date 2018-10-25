@@ -5,8 +5,9 @@
 
 enum regs_8 { AL, AH, BL, BH, CL, CH, DL, DH };
 enum regs_16 { AX, BX, CX, DX };
-enum control_bus_state { INTA, IOREAD, IOWRITE, HALT, FETCH, MEMREAD, MEMWRITE, NONE };
+enum control_bus_state { BUS_INTA, BUS_IOREAD, BUS_IOWRITE, BUS_HALT, BUS_FETCH, BUS_MEMREAD, BUS_MEMWRITE, BUS_NONE };
 enum state { CPU_IDLE, CPU_FETCH, CPU_DECODE, CPU_MEMREAD, CPU_MEMWRITE };
+enum bus_state { BUS_T1, BUS_T2, BUS_T3, BUS_T4, BUS_TW }
 
 struct iapx88 {
     // Registers
@@ -27,10 +28,12 @@ struct iapx88 {
     uint8_t data_pins;
     int control_bus_state;
 
-    // Internal crap
+    // BIU stuff
     uint8_t prefetch_queue[4];
     int prefetch_size;
     int prefetch_offset;
+    int bus_state;
+
     int state;
     int segment_override;
     uint8_t cur_inst[5];
