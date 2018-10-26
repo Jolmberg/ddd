@@ -14,7 +14,13 @@ void mb_run(struct motherboard *mb)
 	if (eu_cycles < 0) {
 	    return;
 	}
-	cycles += cpu_cycles;
+	cycles += eu_cycles;
+	while (biu_cycles < eu_cycles) {
+	    biu_cycles + = biu_prefetch(cpu, cycles);
+	    
+	}
+	switch (cpu->return_reason) {
+	    case WAIT_MEMREAD
 	if (cpu->control_bus_state == NONE) {
 	    /* Bus is unused, prefetch until biu catches up with eu */
 	    

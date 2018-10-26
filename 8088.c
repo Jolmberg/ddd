@@ -107,10 +107,13 @@ int iapx88_step(struct iapx88 *cpu)
 		if (cpu->prefetch_size) {
 		    take_instruction_byte(cpu);
 		} else {
-		    cpu->control_bus_state = FETCH;
-		    printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
-		    cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
-		    return 4;
+		    cpu->return_reason = WAIT_FETCH;
+		    //cpu->control_bus_state = FETCH;
+		    cpu->wanted_segment = cpu->cs;
+		    cpu->wanted_offset = cpu->prefetch_ip++)
+		    //printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
+		    //cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
+		    return 0;
 		}
             }
 	    cpu->state = CPU_DECODE;
@@ -157,8 +160,9 @@ int run_bus(iapx88 *cpu, int cycles) {
 
 int biu_prefetch(struct iapx88 *cpu, int max_cycles)
 {
-    // BLAH
-    if (cpu->control_bus_state == FETCH) {
+    if (cpu->prefetch_size < 4) {
+	if (cpu->control_bus_state = FETCH) {
+
 	prefetch_queue_add(cpu);
 	cpu->control_bus_state = NONE;
     }
