@@ -3,6 +3,23 @@
 
 #include "motherboard.h"
 
+int access_memory(struct motherboard *mb, struct iapx88 *cpu)
+{
+    switch (cpu->control_bus_state) {
+    case BUS_MEMREAD:
+    case BUS_FETCH:
+	printf("Reading memory at %X\n", cpu->address_pins);
+	cpu->data_pins = mb->ram[cpu->address_pins];
+	break;
+    case BUS_MEMWRITE:
+	if (cpu->address_pins < 0xC0000) {
+	    mb->ram[cpu->address_pins] = cpu->data_pins;
+	}
+	break;
+    }
+    return 0;
+}
+
 void mb_run(struct motherboard *mb)
 {
     int cycles = 0;
@@ -14,31 +31,29 @@ void mb_run(struct motherboard *mb)
 	if (eu_cycles < 0) {
 	    return;
 	}
+
 	cycles += eu_cycles;
 	while (biu_cycles < eu_cycles) {
-	    biu_cycles + = biu_prefetch(cpu, cycles);
-	    
-	}
-	switch (cpu->return_reason) {
-	    case WAIT_MEMREAD
-	if (cpu->control_bus_state == NONE) {
-	    /* Bus is unused, prefetch until biu catches up with eu */
-	    
-	    
-	} else {
-	    /* EU is waiting for something */
-	    switch (cpu->control_bus_state) {
-	    case MEMREAD:
-	    case FETCH:
-		printf("Reading memory at %X\n", cpu->address_pins);
-		cpu->data_pins = mb->ram[cpu->address_pins];
-		break;
-	    case MEMWRITE:
-		if (cpu->address_pins < 0xC0000) {
-		    mb->ram[cpu->address_pins] = cpu->data_pins;
-		}
-		break;
+	    biu_cycles += biu_request_prefetch(cpu, cycles);
+	    if (cpu->bus_state == BUS_T3) {
+		biu_cycles += access_memory(mb, cpu);
+		biu_cycles += biu_handle_prefetch(cpu);
 	    }
+	}
+
+	switch (cpu->return_reason) {
+	case WAIT_MEMREAD:
+	    biu_cycles += biu_request_read(cpu, BUS_MEMREAD);
+	    biu_cycles += access_memory(mb, cpu);
+	    biu_cycles += biu_handle_read(cpu);
+	case WAIT_FETCH:
+	    biu_cycles += biu_request_read(cpu, BUS_FETCH);
+	    biu_cycles += access_memory(mb, cpu);
+	    biu_cycles += biu_handle_read(cpu);
+	    break;
+	case WAIT_MEMWRITE:
+	case WAIT_INTERRUPTIBLE:
+	    break;
 	}
     }
 }

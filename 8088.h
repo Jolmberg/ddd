@@ -36,8 +36,8 @@ struct iapx88 {
     int bus_state;
 
     int return_reason;
-    uint16_t wanted_segment, wanted_offset;
-    uint8_t bus'_byte;
+    uint16_t eu_wanted_segment, eu_wanted_offset;
+    uint8_t eu_biu_byte;
     
     int state;
     int segment_override;
@@ -50,5 +50,12 @@ struct iapx88 {
 struct iapx88 *iapx88_create();
 void iapx88_reset(struct iapx88 *cpu);
 int iapx88_step(struct iapx88 *cpu);
+
+int biu_request_prefetch(struct iapx88 *cpu, int max_cycles);
+int biu_handle_prefetch(struct iapx88 *cpu);
+int biu_request_read(struct iapx88 *cpu, int control_bus_state);
+int biu_handle_read(struct iapx88 *cpu);
+int biu_request_write(struct iapx88 *cpu, int control_bus_state);
+
 
 #endif

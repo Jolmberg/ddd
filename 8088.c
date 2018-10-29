@@ -38,7 +38,7 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->ss = 0;
     cpu->es = 0;
 
-    cpu->control_bus_state = NONE;
+    cpu->control_bus_state = BUS_NONE;
     cpu->prefetch_size = 0;
     cpu->prefetch_offset = 0;
     cpu->state = CPU_FETCH;
@@ -95,9 +95,9 @@ int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
     
-    if (cpu->control_bus_state == FETCH) {
+    if (cpu->control_bus_state == BUS_FETCH) {
 	prefetch_queue_add(cpu);
-	cpu->control_bus_state = NONE;
+	cpu->control_bus_state = BUS_NONE;
     }
     while (1) {
         switch (cpu->state) {
@@ -109,8 +109,8 @@ int iapx88_step(struct iapx88 *cpu)
 		} else {
 		    cpu->return_reason = WAIT_FETCH;
 		    //cpu->control_bus_state = FETCH;
-		    cpu->wanted_segment = cpu->cs;
-		    cpu->wanted_offset = cpu->prefetch_ip++)
+		    cpu->eu_wanted_segment = cpu->cs;
+		    cpu->eu_wanted_offset = cpu->prefetch_ip++;
 		    //printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
 		    //cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
 		    return 0;
@@ -158,7 +158,7 @@ int iapx88_step(struct iapx88 *cpu)
 /* 	    cpu->data_pins = read_memory(cpu->address_pins); // blah */
 /* } */
 
-int biu_prefetch(struct iapx88 *cpu, int max_cycles)
+int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
 {
     if (cpu->prefetch_size == 4) {
 	return max_cycles;
@@ -166,35 +166,57 @@ int biu_prefetch(struct iapx88 *cpu, int max_cycles)
     switch (cpu->bus_state) {
     case BUS_NONE:
 	cpu->control_bus_state = BUS_FETCH;
-	cpu->bus_state = T3;
-	cpu->address = ea(cpu->cs, cpu->prefetch_ip++);
+	cpu->bus_state = BUS_T3;
+	cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
 	return 3;
     case BUS_T1:
-	cpu->bus_state = T3;
+	cpu->bus_state = BUS_T3;
 	return 2;
     case BUS_T2:
-	cpu->bus_state = T3;
+	cpu->bus_state = BUS_T3;
 	return 1;
     case BUS_T3:
 	return 0;
     case BUS_T4:
-	cpu->bus_byte = cpu->data_pins;
+	cpu->eu_biu_byte = cpu->data_pins;
 	cpu->bus_state = BUS_IDLE;
-	cpu->control_bus_state = BUS_NONE
+	cpu->control_bus_state = BUS_NONE;
 	return 1;
     case BUS_TW:
 	return 1;
     }
-    /* cpu->control_bus_state = BUS_FETCH; */
-    /* if (cpu->prefetch_size < 4) { */
-    /* 	if (cpu->control_bus_state == FETCH) { */
+}
 
-    /* 	prefetch_queue_add(cpu); */
-    /* 	cpu->control_bus_state = NONE; */
-    /* } */
-    /* if (cpu->prefetch_size < 4) { */
-    /* 	int index = (cpu->prefetch_offset + cpu->prefetch_size) & 3; */
-    /* 	cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++); */
-    /* 	cpu->control_bus_state = FETCH; */
-    /* } */
+int biu_handle_prefetch(struct iapx88 *cpu)
+{
+    int index = (cpu->prefetch_offset + cpu->prefetch_size) & 3;
+    cpu->prefetch_queue[index] = cpu->data_pins;
+    cpu->bus_state = BUS_IDLE;
+    cpu->control_bus_state = BUS_NONE;
+    return 1;
+}
+
+int biu_request_read(struct iapx88 *cpu, int control_bus_state)
+{
+    cpu->control_bus_state = control_bus_state;
+    cpu->address_pins = ea(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
+    cpu->bus_state = BUS_T3;
+    return 3;
+}
+
+int biu_handle_read(struct iapx88 *cpu)
+{
+    cpu->eu_biu_byte = cpu->data_pins;
+    cpu->control_bus_state = BUS_NONE;
+    cpu->bus_state = BUS_IDLE;
+    return 1;
+}
+
+int biu_request_write(struct iapx88 *cpu, int control_bus_state)
+{
+    cpu->control_bus_state = control_bus_state;
+    cpu->address_pins = ea(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
+    cpu->data_pins = cpu->eu_biu_byte;
+    cpu->bus_state = BUS_T3;
+    return 3;
 }
