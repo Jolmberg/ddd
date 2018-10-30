@@ -1,9 +1,13 @@
 #include <stdio.h>
+#if defined(__MACH__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 
 #include "8088.h"
 
-#define IS_SEGMENT_OVERRIDE(x) ((x) & 0xE7 == 0x66)
+#define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
 
 const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -46,13 +50,11 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->cur_inst_len = 99;
     cpu->segment_override = -1;
     cpu->prefetch_ip = 0;
+    cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
-void take_instruction_byte(struct iapx88 *cpu)
+void check_segment_override(struct iapx88 *cpu, uint8_t b)
 {
-    uint8_t b = cpu->prefetch_queue[cpu->prefetch_offset];
-    cpu->prefetch_offset = (cpu->prefetch_offset + 1) & 3;
-    cpu->prefetch_size--;
     if ((cpu->cur_inst_read == 0) && IS_SEGMENT_OVERRIDE(b)) {
 	cpu->segment_override = (b >> 3) & 3;
     } else {
@@ -61,6 +63,20 @@ void take_instruction_byte(struct iapx88 *cpu)
 	    cpu->cur_inst_len = instruction_length[b];
 	}
     }
+}
+
+void take_instruction_byte_from_prefetch(struct iapx88 *cpu)
+{
+    uint8_t b = cpu->prefetch_queue[cpu->prefetch_offset];
+    cpu->prefetch_offset = (cpu->prefetch_offset + 1) & 3;
+    cpu->prefetch_size--;
+    check_segment_override(cpu, b);
+}
+
+void take_instruction_byte_from_biu(struct iapx88 *cpu)
+{
+    uint8_t b = cpu->eu_biu_byte;
+    check_segment_override(cpu, b);
 }
 
 int want_more_instruction_bytes(struct iapx88 *cpu)
@@ -94,26 +110,25 @@ void cleanup(struct iapx88 *cpu)
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
-    
-    if (cpu->control_bus_state == BUS_FETCH) {
-	prefetch_queue_add(cpu);
-	cpu->control_bus_state = BUS_NONE;
-    }
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
 	    printf("fetching\n");
 	    while (want_more_instruction_bytes(cpu)) {
 		if (cpu->prefetch_size) {
-		    take_instruction_byte(cpu);
+		    take_instruction_byte_from_prefetch(cpu);
 		} else {
-		    cpu->return_reason = WAIT_FETCH;
-		    //cpu->control_bus_state = FETCH;
-		    cpu->eu_wanted_segment = cpu->cs;
-		    cpu->eu_wanted_offset = cpu->prefetch_ip++;
-		    //printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
-		    //cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
-		    return 0;
+		    if (cpu->return_reason == WAIT_BIU && cpu->eu_wanted_control_bus_state == BUS_FETCH) {
+			take_instruction_byte_from_biu(cpu);
+		    } else {
+			cpu->return_reason = WAIT_BIU;
+			cpu->eu_wanted_control_bus_state = BUS_FETCH;
+			cpu->eu_wanted_segment = cpu->cs;
+			cpu->eu_wanted_offset = cpu->prefetch_ip++;
+			//printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
+			//cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
+			return 0;
+		    }
 		}
             }
 	    cpu->state = CPU_DECODE;
@@ -164,7 +179,7 @@ int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
 	return max_cycles;
     }
     switch (cpu->bus_state) {
-    case BUS_NONE:
+    case BUS_IDLE:
 	cpu->control_bus_state = BUS_FETCH;
 	cpu->bus_state = BUS_T3;
 	cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
@@ -196,27 +211,23 @@ int biu_handle_prefetch(struct iapx88 *cpu)
     return 1;
 }
 
-int biu_request_read(struct iapx88 *cpu, int control_bus_state)
+int biu_make_request(struct iapx88 *cpu)
 {
-    cpu->control_bus_state = control_bus_state;
+    cpu->control_bus_state = cpu->eu_wanted_control_bus_state;
     cpu->address_pins = ea(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
+    if (cpu->control_bus_state == BUS_MEMWRITE) {
+	cpu->data_pins = cpu->eu_biu_byte;
+    }
     cpu->bus_state = BUS_T3;
     return 3;
 }
 
-int biu_handle_read(struct iapx88 *cpu)
+int biu_handle_response(struct iapx88 *cpu)
 {
-    cpu->eu_biu_byte = cpu->data_pins;
+    if (cpu->control_bus_state == BUS_FETCH || cpu->control_bus_state == BUS_MEMREAD) {
+	cpu->eu_biu_byte = cpu->data_pins;
+    }
     cpu->control_bus_state = BUS_NONE;
     cpu->bus_state = BUS_IDLE;
     return 1;
-}
-
-int biu_request_write(struct iapx88 *cpu, int control_bus_state)
-{
-    cpu->control_bus_state = control_bus_state;
-    cpu->address_pins = ea(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
-    cpu->data_pins = cpu->eu_biu_byte;
-    cpu->bus_state = BUS_T3;
-    return 3;
 }

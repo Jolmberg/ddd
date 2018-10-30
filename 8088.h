@@ -8,7 +8,7 @@ enum regs_16 { AX, BX, CX, DX };
 enum control_bus_state { BUS_INTA, BUS_IOREAD, BUS_IOWRITE, BUS_HALT, BUS_FETCH, BUS_MEMREAD, BUS_MEMWRITE, BUS_NONE };
 enum state { CPU_IDLE, CPU_FETCH, CPU_DECODE, CPU_MEMREAD, CPU_MEMWRITE };
 enum bus_state { BUS_IDLE, BUS_T1, BUS_T2, BUS_T3, BUS_T4, BUS_TW };
-enum return_reason { WAIT_FETCH, WAIT_MEMREAD, WAIT_MEMWRITE, WAIT_INTERRUPTIBLE };
+enum return_reason { NO_REASON, WAIT_BIU, WAIT_INTERRUPTIBLE };
 
 struct iapx88 {
     // Registers
@@ -27,15 +27,16 @@ struct iapx88 {
     // Pins
     uint32_t address_pins;
     uint8_t data_pins;
-    int control_bus_state;
+    enum control_bus_state control_bus_state;
 
     // BIU stuff
     uint8_t prefetch_queue[4];
     int prefetch_size;
     int prefetch_offset;
-    int bus_state;
+    enum bus_state bus_state;
 
-    int return_reason;
+    enum return_reason return_reason;
+    enum control_bus_state eu_wanted_control_bus_state;
     uint16_t eu_wanted_segment, eu_wanted_offset;
     uint8_t eu_biu_byte;
     
@@ -53,9 +54,7 @@ int iapx88_step(struct iapx88 *cpu);
 
 int biu_request_prefetch(struct iapx88 *cpu, int max_cycles);
 int biu_handle_prefetch(struct iapx88 *cpu);
-int biu_request_read(struct iapx88 *cpu, int control_bus_state);
-int biu_handle_read(struct iapx88 *cpu);
-int biu_request_write(struct iapx88 *cpu, int control_bus_state);
-
+int biu_make_request(struct iapx88 *cpu);
+int biu_handle_response(struct iapx88 *cpu);
 
 #endif

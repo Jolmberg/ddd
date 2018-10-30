@@ -1,5 +1,9 @@
 #include <stdio.h>
+#if defined(__MACH__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 
 #include "motherboard.h"
 
@@ -16,6 +20,8 @@ int access_memory(struct motherboard *mb, struct iapx88 *cpu)
 	    mb->ram[cpu->address_pins] = cpu->data_pins;
 	}
 	break;
+    default:
+	printf("Unhandled bus state\n");
     }
     return 0;
 }
@@ -27,7 +33,7 @@ void mb_run(struct motherboard *mb)
     while (1) {
 	int eu_cycles = iapx88_step(mb->cpu);
 	int biu_cycles = 0;
-	printf("Ran %d cycles\n", eu_cycles);
+	printf("EU rn for %d cycles\n", eu_cycles);
 	if (eu_cycles < 0) {
 	    return;
 	}
@@ -42,19 +48,24 @@ void mb_run(struct motherboard *mb)
 	}
 
 	switch (cpu->return_reason) {
-	case WAIT_MEMREAD:
-	    biu_cycles += biu_request_read(cpu, BUS_MEMREAD);
+	case WAIT_BIU:
+	    printf("EU is waiting for BIU\n");
+	    biu_cycles += biu_make_request(cpu);
 	    biu_cycles += access_memory(mb, cpu);
-	    biu_cycles += biu_handle_read(cpu);
-	case WAIT_FETCH:
-	    biu_cycles += biu_request_read(cpu, BUS_FETCH);
-	    biu_cycles += access_memory(mb, cpu);
-	    biu_cycles += biu_handle_read(cpu);
+	    biu_cycles += biu_handle_response(cpu);
+	    printf("BIU ran for %d cycles\n", biu_cycles);
 	    break;
-	case WAIT_MEMWRITE:
 	case WAIT_INTERRUPTIBLE:
+	    printf("CPU is waiting for a possible interrupt\n");
 	    break;
 	}
+	if (eu_cycles < biu_cycles) {
+	    // eu needs to idle for a bit
+	}
+	printf("Continue? ");
+	int cont = getc(stdin);
+	if (cont == 'n') break;
+	printf("\n");
     }
 }
 
