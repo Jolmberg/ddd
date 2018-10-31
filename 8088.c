@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+
 #if defined(__MACH__)
 #include <stdlib.h>
 #else
@@ -17,15 +19,73 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+
+
+char instruction_format[256][20] =
+{
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "JAE $1i8", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "SAHF", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "MOV al, $1i8", "MOV cl, $1i8", "MOV dl, $1i8", "MOV bl, $1i8", "MOV ah, $1i8", "MOV ch, $1i8", "MOV dh, $1i8", "MOV bh, $1i8", "MOV ax, $1i16", "MOV cx, $1i16", "MOV dx, $1i16", "MOV bx, $1i16", "MOV sp, $1i16", "MOV bp, $1i16", "MOV si, $1i16", "MOV di, $1i16",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "JMP $3i16:$1i16", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "CLI", "", "", "", "", ""
+};
+
+
+void sprint_instruction(char *buffer, struct iapx88 *cpu) {
+    char *format = instruction_format[cpu->cur_inst[0]];
+    int i;
+    while (format[0]) {
+        if (format[0] != '$') {
+            buffer[0] = format[0];
+            buffer++;
+            format++;
+        } else {
+            int operand = format[1] - '0';
+            format += 2;
+            if (!strncmp(format, "i8", 2)) {
+                int p = sprintf(buffer, "0x%x", cpu->cur_inst[operand]);
+                buffer += p;
+                format += 2;
+            } else if (!strncmp(format, "i16", 3)) {
+                int word = cpu->cur_inst[operand] | (cpu->cur_inst[operand + 1] << 8);
+                int p = sprintf(buffer, "0x%x", word);
+                operand += 2;
+                buffer += p;
+                format += 3;
+            } else {
+                format++; // Just get us out of here!
+            }
+        }
+    }
+    buffer[0] = format[0];
+}
+
+void print_instruction(struct iapx88 *cpu)
+{
+    char buffer[30];
+    sprint_instruction(buffer, cpu);
+    printf("%s\n", buffer);
+}
 
 struct iapx88 *iapx88_create(void)
 {
@@ -50,6 +110,7 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->cur_inst_len = 99;
     cpu->segment_override = -1;
     cpu->prefetch_ip = 0;
+    cpu->prefetch_forbidden = 0;
     cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
@@ -115,10 +176,12 @@ int iapx88_step(struct iapx88 *cpu)
         case CPU_FETCH:
 	    printf("fetching\n");
 	    while (want_more_instruction_bytes(cpu)) {
-		if (cpu->prefetch_size) {
+		if (cpu->prefetch_size > 0) {
+                    printf("Yay, prefetched!\n");
 		    take_instruction_byte_from_prefetch(cpu);
 		} else {
 		    if (cpu->return_reason == WAIT_BIU && cpu->eu_wanted_control_bus_state == BUS_FETCH) {
+                        cpu->return_reason = NO_REASON;
 			take_instruction_byte_from_biu(cpu);
 		    } else {
 			cpu->return_reason = WAIT_BIU;
@@ -135,6 +198,8 @@ int iapx88_step(struct iapx88 *cpu)
 	    break;
 	case CPU_DECODE:
 	    printf("decode\n");
+            printf("Instruction: ");
+            print_instruction(cpu);
 	    if (cpu->cur_inst_len == 0) {
 		return -1;
 	    }
@@ -142,19 +207,34 @@ int iapx88_step(struct iapx88 *cpu)
 	    case 0xEA: /* JMP direct intersegment */
 		word1 = word_from_bytes(cpu->cur_inst + 1);
 		word2 = word_from_bytes(cpu->cur_inst + 3);
-		printf("JMP 0x%X:0x%X\n", word2, word1);
+                print_instruction(cpu);
 		cpu->cs = word2;
 		cpu->ip = word1;
 		cpu->prefetch_size = 0;
 		cpu->prefetch_ip = cpu->ip;
+                cpu->prefetch_forbidden = 1;
 		cleanup(cpu);
 		return 15;
 	    case 0xFA: /* CLI */
-		printf("CLI\n");
 		cpu->flags &= 0xFDFF;
 		cleanup(cpu);
 		return 2;
-		
+            case 0xB0:
+            case 0xB1:
+            case 0xB2:
+            case 0xB3:
+            case 0xB4:
+            case 0xB5:
+            case 0xB6:
+            case 0xB7: /* MOV reg8, immediate */
+		cpu->reg = cpu->cur_inst[0] & 3;
+                cpu->reg8[cpu->reg] = cpu->cur_inst[1];
+                cleanup(cpu);
+                return 4;
+            case 0x9E: /* SAHF */
+                cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+                cleanup(cpu);
+                return 4;
 	    default:
 		printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);
 		return -1;
@@ -206,6 +286,7 @@ int biu_handle_prefetch(struct iapx88 *cpu)
 {
     int index = (cpu->prefetch_offset + cpu->prefetch_size) & 3;
     cpu->prefetch_queue[index] = cpu->data_pins;
+    cpu->prefetch_size++;
     cpu->bus_state = BUS_IDLE;
     cpu->control_bus_state = BUS_NONE;
     return 1;

@@ -33,19 +33,22 @@ void mb_run(struct motherboard *mb)
     while (1) {
 	int eu_cycles = iapx88_step(mb->cpu);
 	int biu_cycles = 0;
-	printf("EU rn for %d cycles\n", eu_cycles);
+	printf("EU ran for %d cycles\n", eu_cycles);
 	if (eu_cycles < 0) {
 	    return;
 	}
 
 	cycles += eu_cycles;
-	while (biu_cycles < eu_cycles) {
-	    biu_cycles += biu_request_prefetch(cpu, cycles);
-	    if (cpu->bus_state == BUS_T3) {
-		biu_cycles += access_memory(mb, cpu);
-		biu_cycles += biu_handle_prefetch(cpu);
-	    }
-	}
+        if (!cpu->prefetch_forbidden) {
+            while (biu_cycles < eu_cycles) {
+                biu_cycles += biu_request_prefetch(cpu, cycles);
+                if (cpu->bus_state == BUS_T3) {
+                    biu_cycles += access_memory(mb, cpu);
+                    biu_cycles += biu_handle_prefetch(cpu);
+                }
+            }
+            cpu->prefetch_forbidden = 0;
+        }
 
 	switch (cpu->return_reason) {
 	case WAIT_BIU:

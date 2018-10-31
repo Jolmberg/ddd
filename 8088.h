@@ -33,6 +33,7 @@ struct iapx88 {
     uint8_t prefetch_queue[4];
     int prefetch_size;
     int prefetch_offset;
+    int prefetch_forbidden;
     enum bus_state bus_state;
 
     enum return_reason return_reason;
@@ -46,6 +47,7 @@ struct iapx88 {
     int cur_inst_read;
     int cur_inst_len;
     uint16_t prefetch_ip;
+    int reg;
 };
 
 struct iapx88 *iapx88_create();
