@@ -188,8 +188,6 @@ int iapx88_step(struct iapx88 *cpu)
 			cpu->eu_wanted_control_bus_state = BUS_FETCH;
 			cpu->eu_wanted_segment = cpu->cs;
 			cpu->eu_wanted_offset = cpu->prefetch_ip++;
-			//printf("Setting address pins: %X\n", ea(cpu->cs, cpu->prefetch_ip));
-			//cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
 			return 0;
 		    }
 		}
@@ -214,10 +212,12 @@ int iapx88_step(struct iapx88 *cpu)
 		cpu->prefetch_ip = cpu->ip;
                 cpu->prefetch_forbidden = 1;
 		cleanup(cpu);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 15;
 	    case 0xFA: /* CLI */
 		cpu->flags &= 0xFDFF;
 		cleanup(cpu);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 2;
             case 0xB0:
             case 0xB1:
@@ -230,10 +230,12 @@ int iapx88_step(struct iapx88 *cpu)
 		cpu->reg = cpu->cur_inst[0] & 3;
                 cpu->reg8[cpu->reg] = cpu->cur_inst[1];
                 cleanup(cpu);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
                 return 4;
             case 0x9E: /* SAHF */
                 cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
                 cleanup(cpu);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
                 return 4;
 	    default:
 		printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);

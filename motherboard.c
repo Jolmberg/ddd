@@ -61,6 +61,9 @@ void mb_run(struct motherboard *mb)
 	case WAIT_INTERRUPTIBLE:
 	    printf("CPU is waiting for a possible interrupt\n");
 	    break;
+	case NO_REASON:
+	    printf("CPU is waiting for no reason!\n");
+	    break;
 	}
 	if (eu_cycles < biu_cycles) {
 	    // eu needs to idle for a bit
