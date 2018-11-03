@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    surface = IMG_Load("ascii.png");
+    surface = IMG_Load("asciialpha.png");
     if (!surface) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create surface from image: %s", IMG_GetError());
         return 3;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         if (event.type == SDL_QUIT) {
             break;
         }
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
+        SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0x00, 0x00);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, &rect);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0xFF, 0x00);
