@@ -15,7 +15,6 @@ int vsdlprintf(SDL_Surface *surface, int x, int y, char *fmt, va_list argp)
 {
     static char buffer[1024];
     vsprintf(buffer, fmt, argp);
-    printf("%s\n", buffer);
     char *b = buffer;
     int i = 0;
     while (*b) {
@@ -27,6 +26,7 @@ int vsdlprintf(SDL_Surface *surface, int x, int y, char *fmt, va_list argp)
 	b++;
 	i++;
     }
+    return i;
 }
 
 int sdlprintf(SDL_Surface *surface, int x, int y, char *fmt, ...)
@@ -35,5 +35,6 @@ int sdlprintf(SDL_Surface *surface, int x, int y, char *fmt, ...)
     va_start(argp, fmt);
     int r = vsdlprintf(surface, x, y, fmt, argp);
     va_end(argp);
+    return r;
 }
    

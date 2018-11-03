@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
         return 3;
     }
     printf("humbug\n");
-    sdlprintf(surface, 20, 40, "broffe");
+    sdlprintf(surface, 20, 40, "broffe%x", amask);
     printf("asd\n");
 
     texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     }
     SDL_FreeSurface(surface);
     SDL_SetTextureColorMod(texture, 255, 0, 0);
-    SDL_Rect rect = { 10, 10, 288, 128 };
+
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
     while (1) {
         SDL_PollEvent(&event);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0xFF, 0x00);
-	SDL_RenderDrawLine(renderer, 10,10,100,100);
+	SDL_RenderDrawLine(renderer, 10, 10, 100, 100);
         SDL_RenderPresent(renderer);
     }
     SDL_DestroyTexture(texture);
