@@ -3,10 +3,12 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_surface.h>
+#include <math.h>
 
 #include "motherboard.h"
 #include "8088.h"
-#include "text.h"
+#include "sdl_text.h"
+#include "colour.h"
 
 int main(int argc, char *argv[])
 {
@@ -14,6 +16,7 @@ int main(int argc, char *argv[])
     SDL_Renderer *renderer;
     SDL_Surface *surface;
     SDL_Texture *texture;
+    SDL_Texture *debugger;
     SDL_Event event;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -29,52 +32,35 @@ int main(int argc, char *argv[])
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-    text_init();
-    //surface = IMG_Load("asciialpha.png");
-    Uint32 rmask, gmask, bmask, amask;
+    text_init(renderer);
 
-    /* SDL interprets each pixel as a 32-bit number, so our masks must depend
-       on the endianness (byte order) of the machine */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    rmask = 0xff000000;
-    gmask = 0x00ff0000;
-    bmask = 0x0000ff00;
-    amask = 0x000000ff;
-#else
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = 0xff000000;
-#endif
-
-    surface = SDL_CreateRGBSurface(0, 320, 240, 32, rmask, gmask, bmask, amask);
-    if (!surface) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create surface from image: %s", IMG_GetError());
+    debugger = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    if (!debugger) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s", SDL_GetError());
         return 3;
     }
-    printf("humbug\n");
-    sdlprintf(surface, 20, 40, "broffe%x", amask);
+
+    
     printf("asd\n");
-
-    texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (!texture) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture from surface: %s", SDL_GetError());
-        return 3;
-    }
-    SDL_FreeSurface(surface);
-    SDL_SetTextureColorMod(texture, 255, 0, 0);
-
-    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+    
+    float i = 0;
     while (1) {
+	i += 0.1;
         SDL_PollEvent(&event);
         if (event.type == SDL_QUIT) {
             break;
         }
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0xFF, 0x00);
-	SDL_RenderDrawLine(renderer, 10, 10, 100, 100);
+
+	SDL_SetRenderTarget(renderer, debugger);
+	SDL_RenderClear(renderer);
+	sdlprintf(renderer, 60 + 55 * cos(i/1.5), 120 + 100 * sin(i), &(struct colour){ 0, 0, 128 + 127 * sin(i/10), 150 + 100 * cos(i/9) }, &(struct colour){ 0, 155, 100, 0 }, "broffe!=)(+rk%x", 16777216);
+	SDL_SetRenderTarget(renderer, NULL);
+
+        SDL_RenderCopy(renderer, debugger, NULL, NULL);
+	SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0xFF, 0x00);
+	SDL_RenderDrawLine(renderer, 160 + 120 * cos(i/3), 10 + 200*fabs(cos(i/5+2)), 100 + 90*sin(i/4+2), 100 + 70*cos(i/2));
         SDL_RenderPresent(renderer);
     }
     SDL_DestroyTexture(texture);
