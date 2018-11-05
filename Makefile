@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -O2 $(shell pkg-config --cflags sdl2 SDL2_image)
-OBJECTS = ddd.o 8088.o motherboard.o sdl_text.o
+CFLAGS = -O2 $(shell pkg-config --cflags sdl2 SDL2_image) -std=c11 -pedantic
+OBJECTS = ddd.o 8088.o motherboard.o sdl_text.o gui.o
 LDFLAGS = $(shell pkg-config --libs sdl2 SDL2_image) -lm
 
 

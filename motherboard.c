@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <pthread.h>
 #if defined(__MACH__)
 #include <stdlib.h>
 #else
@@ -26,8 +27,9 @@ int access_memory(struct motherboard *mb, struct iapx88 *cpu)
     return 0;
 }
 
-void mb_run(struct motherboard *mb)
+void *mb_run(void *mbarg)
 {
+    struct motherboard *mb = mbarg;
     int cycles = 0;
     struct iapx88 *cpu = mb->cpu;
     while (1) {
@@ -35,7 +37,7 @@ void mb_run(struct motherboard *mb)
 	int biu_cycles = 0;
 	printf("EU ran for %d cycles\n", eu_cycles);
 	if (eu_cycles < 0) {
-	    return;
+	    return NULL;
 	}
 
 	cycles += eu_cycles;
@@ -60,6 +62,11 @@ void mb_run(struct motherboard *mb)
 	    break;
 	case WAIT_INTERRUPTIBLE:
 	    printf("CPU is waiting for a possible interrupt\n");
+	    if (mb->debug) {
+		pthread_mutex_lock(&mb->mutex);
+		pthread_cond_wait(&mb->condition, &mb->mutex);
+		pthread_mutex_unlock(&mb->mutex);
+	    }
 	    break;
 	case NO_REASON:
 	    printf("CPU is waiting for no reason!\n");
@@ -68,17 +75,20 @@ void mb_run(struct motherboard *mb)
 	if (eu_cycles < biu_cycles) {
 	    // eu needs to idle for a bit
 	}
-	printf("Continue? ");
-	int cont = getc(stdin);
-	if (cont == 'n') break;
-	printf("\n");
+	/* printf("Continue? "); */
+	/* int cont = getc(stdin); */
+	/* if (cont == 'n') break; */
+	/* printf("\n"); */
     }
+    return NULL;
 }
 
 struct motherboard *mb_create()
 {
     struct motherboard *mb = (struct motherboard *)malloc(sizeof(struct motherboard));
     mb->cpu = iapx88_create();
+    pthread_mutex_init(&mb->mutex, NULL); //PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_init(&mb->condition, NULL); //PTHREAD_COND_INITIALIZER;
     return mb;
 }
 
