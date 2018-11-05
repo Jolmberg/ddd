@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 
 	SDL_SetRenderTarget(renderer, debugger);
 	SDL_RenderClear(renderer);
-	sdlprintf(renderer, 60 + 55 * cos(i/1.5), 120 + 100 * sin(i), &(struct colour){ 0, 0, 128 + 127 * sin(i/10), 150 + 100 * cos(i/9) }, &(struct colour){ 0, 155, 100, 0 }, "broffe!=)(+rk%x", 16777216);
+	sdlprintf(renderer, 60 + 55 * cos(i/1.3), 120 + 100 * sin(i), &(struct colour){ 0, 0, 128 + 127 * sin(i/10), 150 + 100 * cos(i/9) }, &(struct colour){ 0, 155, 100, 0 }, "broffe!=)(+rk%x", 16777216);
 	SDL_SetRenderTarget(renderer, NULL);
 
         SDL_RenderCopy(renderer, debugger, NULL, NULL);
