@@ -114,6 +114,10 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
+int reg8index(int reg) {
+    return ((reg << 1) & 7) | (reg >> 2);
+}
+
 void check_segment_override(struct iapx88 *cpu, uint8_t b)
 {
     if ((cpu->cur_inst_read == 0) && IS_SEGMENT_OVERRIDE(b)) {
@@ -227,7 +231,8 @@ int iapx88_step(struct iapx88 *cpu)
             case 0xB5:
             case 0xB6:
             case 0xB7: /* MOV reg8, immediate */
-		cpu->reg = cpu->cur_inst[0] & 3;
+		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
+		//printf("Reg: %d\n", cpu->cur_inst[0] & 7);
                 cpu->reg8[cpu->reg] = cpu->cur_inst[1];
                 cleanup(cpu);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;

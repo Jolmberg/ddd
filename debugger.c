@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "debugger.h"
 #include "8088.h"
 

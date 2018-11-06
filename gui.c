@@ -24,7 +24,7 @@ int gui_init()
         return 3;
     }
     
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
     
     text_init(renderer);
     
@@ -54,47 +54,50 @@ void update_tex_title(SDL_Texture *screen)
 		  &(struct colour){ 0, 0, 0, 0 }, "%c", title[j]);
     }
     i += 0.1;
-
 }
 
 void init_tex_debugger(SDL_Texture *debugger)
 {
     static char *indices[] = { "SP", "BP", "SI", "DI" };
     static char *segments[] = { "ES", "CS", "SS", "DS" };
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
     SDL_SetRenderTarget(renderer, debugger);
+    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
     SDL_RenderClear(renderer);
     for (int i = 0; i < 4; i++) {
 	sdlprintf(renderer, 0, 16*i,
-		  &(struct colour){ 0, 200, 200, 200},
-		  &(struct colour){ 0, 0, 0, 160 - 32*i},
-		  " %cX ", 'A' + i);
+		  &(struct colour){ 255, 200, 200, 200},
+		  &(struct colour){ 255, 0, 0, 160 - 32*i},
+		  " %cX         ", 'A' + i);
 	sdlprintf(renderer, 0, 64 + 16*i,
-		  &(struct colour){ 0, 200, 200, 200},
-		  &(struct colour){ 0, 160 - 32*i, 0, 0},
-		  " %s ", indices[i]);	
-	sdlprintf(renderer, 13*9, 16*i,
-		  &(struct colour){ 0, 200, 200, 200},
-		  &(struct colour){ 0, 0, 160 - 32*i, 0},
-		  " %s ", segments[i]);
+		  &(struct colour){ 255, 200, 200, 200},
+		  &(struct colour){ 255, 160 - 32*i, 0, 0},
+		  " %s         ", indices[i]);
+	sdlprintf(renderer, 12*9, 16*i,
+		  &(struct colour){ 255, 200, 200, 200},
+		  &(struct colour){ 255, 0, 160 - 32*i, 0},
+		  " %s         ", segments[i]);
     }
 }
 	
 void update_tex_debugger(SDL_Texture *debugger, struct registers *regs)
 {
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
     SDL_SetRenderTarget(renderer, debugger);
-
-    sdlprintf(renderer, 4*9, 0,
-	      &(struct colour){ 0, 200, 200, 200},
-	      &(struct colour){ 0, 0, 0, 160 },
-	      " 0x%4X ", regs->ax);
+    /* SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); */
+    /* SDL_SetTextureBlendMode(debugger, SDL_BLENDMODE_BLEND); */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    for (int i = 0; i < 8; i++) {
+	sdlprintf(renderer, 4*9, 16*i,
+		  &(struct colour){ 255, 200, 200, 200 },
+		  NULL,
+		  " 0x%04X ", regs->reg16[i]);
+    }
 }
 
 
 int gui_loop()
 {
-    SDL_Texture *tex_screen, *tex_debugger;
+    SDL_Texture *tex_screen, *tex_debugger_bg, *tex_debugger_fg;
     SDL_Event event;
     SDL_Rect screen_rect = { 0, 0, 320, 240};
     SDL_Rect debugger_rect = { 320, 0, 320, 240};
@@ -106,15 +109,17 @@ int gui_loop()
 	fprintf(stderr,"Failed to create thread: %d\n", tret);
 	return 100;
     }
-    
     tex_screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    tex_debugger = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    if (!tex_screen || !tex_debugger) {
+    tex_debugger_bg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    tex_debugger_fg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    if (!tex_screen || !tex_debugger_bg || !tex_debugger_fg) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s", SDL_GetError());
         return 3;
     }
 
-    init_tex_debugger(tex_debugger);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureBlendMode(tex_debugger_fg, SDL_BLENDMODE_BLEND);
+    init_tex_debugger(tex_debugger_bg);
     
     float i = 0;
     while (1) {
@@ -133,13 +138,15 @@ int gui_loop()
 
 	update_tex_title(tex_screen);
 	copy_cpu_regs(cpu, &regs);
-	update_tex_debugger(tex_debugger, &regs);
+	update_tex_debugger(tex_debugger_fg, &regs);
 	
 	SDL_SetRenderTarget(renderer, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, tex_screen, NULL, &screen_rect);
-	SDL_RenderCopy(renderer, tex_debugger, NULL, &debugger_rect); 
+	SDL_SetTextureBlendMode(tex_debugger_fg, SDL_BLENDMODE_BLEND);
+	SDL_RenderCopy(renderer, tex_debugger_bg, NULL, &debugger_rect);
+	SDL_RenderCopy(renderer, tex_debugger_fg, NULL, &debugger_rect);
 	SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0xFF, 0x00);
         SDL_RenderPresent(renderer);
     }
