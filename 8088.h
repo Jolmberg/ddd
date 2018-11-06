@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-enum regs_8 { AL, AH, BL, BH, CL, CH, DL, DH };
-enum regs_16 { AX, BX, CX, DX };
+enum regs_8 { AL, AH, CL, CH, DL, DH, BL, BH };
+enum regs_16 { AX, CX, DX, BX };
 enum control_bus_state { BUS_INTA, BUS_IOREAD, BUS_IOWRITE, BUS_HALT, BUS_FETCH, BUS_MEMREAD, BUS_MEMWRITE, BUS_NONE };
 enum state { CPU_IDLE, CPU_FETCH, CPU_DECODE, CPU_MEMREAD, CPU_MEMWRITE };
 enum bus_state { BUS_IDLE, BUS_T1, BUS_T2, BUS_T3, BUS_T4, BUS_TW };
@@ -15,8 +15,8 @@ struct iapx88 {
     union {
 	uint8_t reg8[8];
 	uint16_t reg16[8];
-	struct { uint8_t al, ah, bl, bh, cl, ch, dl, dh; };
-	struct { uint16_t ax, bx, cx, dx, sp, bp, si, di; };
+	struct { uint8_t al, ah, cl, ch, dl, dh, bl, bh; };
+	struct { uint16_t ax, cx, dx, bx, sp, bp, si, di; };
     };
     union {
 	uint16_t segreg[4];

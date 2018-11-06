@@ -1,11 +1,11 @@
 CC = gcc
 CFLAGS = -O2 $(shell pkg-config --cflags sdl2 SDL2_image) -std=c11 -pedantic
-OBJECTS = ddd.o 8088.o motherboard.o sdl_text.o gui.o
-LDFLAGS = $(shell pkg-config --libs sdl2 SDL2_image) -lm
+OBJECTS = ddd.o 8088.o motherboard.o sdl_text.o gui.o debugger.o
+LDFLAGS = $(shell pkg-config --libs sdl2 SDL2_image) -lm -lpthread
 
 
 ddd : $(OBJECTS)
-	$(CC) $(LDFLAGS) $(SDLFLAGS) $(OBJECTS) -o ddd
+	$(CC) $(SDLFLAGS) $(OBJECTS) -o ddd $(LDFLAGS)
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
@@ -15,6 +15,10 @@ ddd : $(OBJECTS)
 motherboard.o : motherboard.h
 
 sdl_text.o : sdl_text.h
+
+gui.o : gui.h
+
+debugger.o : debugger.h
 
 clean:
 	rm -rf *.o ddd *~

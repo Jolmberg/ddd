@@ -63,6 +63,7 @@ void *mb_run(void *mbarg)
 	case WAIT_INTERRUPTIBLE:
 	    printf("CPU is waiting for a possible interrupt\n");
 	    if (mb->debug) {
+		printf("asd %X\n", cpu->ax);
 		pthread_mutex_lock(&mb->mutex);
 		pthread_cond_wait(&mb->condition, &mb->mutex);
 		pthread_mutex_unlock(&mb->mutex);

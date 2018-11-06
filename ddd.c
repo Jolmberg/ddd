@@ -9,6 +9,7 @@
 #include "8088.h"
 #include "sdl_text.h"
 #include "colour.h"
+#include "gui.h"
 
 int main(int argc, char *argv[])
 {
