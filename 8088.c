@@ -167,8 +167,10 @@ uint16_t word_from_bytes(uint8_t *bytes)
 
 void cleanup(struct iapx88 *cpu)
 {
+    cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
     cpu->cur_inst_len = 99;
     cpu->cur_inst_read = 0;
+    cpu->segment_override = -1;
     cpu->state = CPU_FETCH;
 }
 

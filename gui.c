@@ -70,29 +70,51 @@ void init_tex_debugger(SDL_Texture *d)
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 0, 0, 160 - 32*i},
 		  " %cX         ", 'A' + i);
-	sdlprintf(renderer, 0, 64 + 16*i,
+	sdlprintf(renderer, 12*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 160 - 32*i, 0, 0},
 		  " %s         ", indices[i]);
-	sdlprintf(renderer, 12*9, 16*i,
+	sdlprintf(renderer, 24*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 0, 160 - 32*i, 0},
 		  " %s         ", segments[i]);
     }
+    sdlprintf(renderer, 0, 64,
+	      &(struct colour){ 255, 200, 200, 200},
+	      &(struct colour){ 255, 100, 0, 100},
+	      " IP         ");
+    /* sdlprintf(renderer, 12*9, 64, */
+    /* 	      &(struct colour){ 255, 200, 200, 200}, */
+    /* 	      &(struct colour){ 255, 160, 100, 0}, */
+    /* 	      " PF                     "); */
 }
 	
 void update_tex_debugger(SDL_Texture *texture, struct debugger *debugger)
 {
+    static int general[] = { 0, 3, 1, 2 };
     struct registers *regs = debugger->register_history + debugger->register_history_usage;
     SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
-    for (int i = 0; i < 8; i++) {
+    printf("ip: %d\n", debugger->cpu->ip);
+    for (int i = 0; i < 4; i++) {
 	sdlprintf(renderer, 4*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200 },
 		  NULL,
-		  " 0x%04X ", regs->reg16[i]);
+		  " 0x%04X ", regs->reg16[general[i]]);
+	sdlprintf(renderer, 16*9, 16*i,
+		  &(struct colour){ 255, 200, 200, 200 },
+		  NULL,
+		  " 0x%04X ", regs->reg16[4+i]);
+	sdlprintf(renderer, 28*9, 16*i,
+		  &(struct colour){ 255, 200, 200, 200 },
+		  NULL,
+		  " 0x%04X ", regs->segreg[i]);
     }
+    sdlprintf(renderer, 4*9, 64,
+		  &(struct colour){ 255, 200, 200, 200 },
+		  NULL,
+		  " 0x%04X ", regs->ip);
 }
 
 
