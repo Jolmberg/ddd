@@ -9,8 +9,10 @@
 SDL_Window *window;
 SDL_Renderer *renderer;
 
+// These should probably be in a struct
 struct motherboard *mb;
 struct iapx88 *cpu;
+struct debugger *debugger;
 
 int gui_init()
 {
@@ -31,10 +33,10 @@ int gui_init()
     // Create emulator here for now
     mb = mb_create();
     cpu = mb->cpu;
+    debugger = debugger_create(mb);
     mb->debug = 1;
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
-    //mb_run(mb);
 
     return 0;    
 }
@@ -44,24 +46,24 @@ void update_tex_title(SDL_Texture *screen)
     static float i = 0;
     static char title[] = "Double Dragon Debugger v0.0";
     SDL_SetRenderTarget(renderer, screen);
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     for (int j = 0; j < strlen(title); j++) {
 	sdlprintf(renderer,
 		  30 + 9 * j -20 * cos(i-j/2.5),
-		  120 + (100 * sin((i)/50)) * sin(i-j/5.0),
-		  &(struct colour){ 0, 0, 128 + 127 * sin(i/10), 150 + 100 * cos(i/9) },
+		  120 + 10 * sin(i-j/5.0) + 50 * sin(-(i/10 - j/20.0)),
+		  &(struct colour){ 255, 0, 128 + 127 * sin(i/10), 150 + 100 * cos(i/9) },
 		  &(struct colour){ 0, 0, 0, 0 }, "%c", title[j]);
     }
     i += 0.1;
 }
 
-void init_tex_debugger(SDL_Texture *debugger)
+void init_tex_debugger(SDL_Texture *d)
 {
     static char *indices[] = { "SP", "BP", "SI", "DI" };
     static char *segments[] = { "ES", "CS", "SS", "DS" };
-    SDL_SetRenderTarget(renderer, debugger);
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
+    SDL_SetRenderTarget(renderer, d);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     for (int i = 0; i < 4; i++) {
 	sdlprintf(renderer, 0, 16*i,
@@ -79,11 +81,10 @@ void init_tex_debugger(SDL_Texture *debugger)
     }
 }
 	
-void update_tex_debugger(SDL_Texture *debugger, struct registers *regs)
+void update_tex_debugger(SDL_Texture *texture, struct debugger *debugger)
 {
-    SDL_SetRenderTarget(renderer, debugger);
-    /* SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); */
-    /* SDL_SetTextureBlendMode(debugger, SDL_BLENDMODE_BLEND); */
+    struct registers *regs = debugger->register_history + debugger->register_history_usage;
+    SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     for (int i = 0; i < 8; i++) {
@@ -137,8 +138,11 @@ int gui_loop()
         }
 
 	update_tex_title(tex_screen);
-	copy_cpu_regs(cpu, &regs);
-	update_tex_debugger(tex_debugger_fg, &regs);
+	if (debugger->step != mb->step) {
+	    printf("Stuff!\n");
+	    debugger_step(debugger);
+	    update_tex_debugger(tex_debugger_fg, debugger);
+	}
 	
 	SDL_SetRenderTarget(renderer, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);

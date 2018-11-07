@@ -2,6 +2,7 @@
 #define _DEBUGGER_H_
 
 #include "8088.h"
+#include "motherboard.h"
 
 struct registers {
     union {
@@ -17,6 +18,15 @@ struct registers {
     uint16_t ip, flags;
 };
 
-void copy_cpu_regs(struct iapx88 *cpu, struct registers *regs);
+struct debugger {
+    struct motherboard *mb;
+    struct iapx88 *cpu;
+    struct registers *register_history;
+    int register_history_size, register_history_start, register_history_usage;
+    int step;
+};
+
+struct debugger *debugger_create(struct motherboard *mb);
+void debugger_step(struct debugger *debugger);
 
 #endif

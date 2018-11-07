@@ -62,6 +62,7 @@ void *mb_run(void *mbarg)
 	    break;
 	case WAIT_INTERRUPTIBLE:
 	    printf("CPU is waiting for a possible interrupt\n");
+	    mb->step++;
 	    if (mb->debug) {
 		pthread_mutex_lock(&mb->mutex);
 		pthread_cond_wait(&mb->condition, &mb->mutex);
@@ -87,6 +88,7 @@ struct motherboard *mb_create()
 {
     struct motherboard *mb = (struct motherboard *)malloc(sizeof(struct motherboard));
     mb->cpu = iapx88_create();
+    mb->step = 0;
     pthread_mutex_init(&mb->mutex, NULL); //PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_init(&mb->condition, NULL); //PTHREAD_COND_INITIALIZER;
     return mb;

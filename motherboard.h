@@ -13,6 +13,7 @@ struct motherboard {
     int debug;
     pthread_mutex_t mutex;
     pthread_cond_t condition;
+    int step;
 };
 
 struct motherboard *mb_create(void);
