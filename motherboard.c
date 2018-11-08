@@ -27,6 +27,12 @@ int access_memory(struct motherboard *mb, struct iapx88 *cpu)
     return 0;
 }
 
+uint8_t mb_memory_peek(struct motherboard *mb, uint32_t address)
+{
+    // Do smart stuff here if needed
+    return mb->ram[address];
+}
+
 void *mb_run(void *mbarg)
 {
     struct motherboard *mb = mbarg;

@@ -20,5 +20,6 @@ struct motherboard *mb_create(void);
 void *mb_run(void *mbarg);
 int mb_load_bios_rom(struct motherboard *mb, const char *filename);
 void mb_powerup(struct motherboard *mb);
+uint8_t mb_memory_peek(struct motherboard *mb, uint32_t address);
 
 #endif

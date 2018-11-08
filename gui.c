@@ -151,10 +151,14 @@ int gui_loop()
 		return 0;
 	    }
 	    if (event.type == SDL_KEYUP) {
-		if (event.key.keysym.sym == SDLK_c) {
+		switch(event.key.keysym.sym) {
+		case SDLK_c:
 		    pthread_mutex_lock(&mb->mutex);
 		    pthread_cond_signal(&mb->condition);
 		    pthread_mutex_unlock(&mb->mutex);
+		    break;
+		case SDLK_q:
+		    return 0;
 		}
 	    }
         }
