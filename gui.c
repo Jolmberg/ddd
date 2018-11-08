@@ -58,7 +58,7 @@ void update_tex_title(SDL_Texture *screen)
     i += 0.1;
 }
 
-void init_tex_debugger(SDL_Texture *d)
+void init_tex_regview(SDL_Texture *d)
 {
     static char *indices[] = { "SP", "BP", "SI", "DI" };
     static char *segments[] = { "ES", "CS", "SS", "DS" };
@@ -89,7 +89,7 @@ void init_tex_debugger(SDL_Texture *d)
     /* 	      " PF                     "); */
 }
 	
-void update_tex_debugger(SDL_Texture *texture, struct debugger *debugger)
+void update_tex_regview(SDL_Texture *texture, struct debugger *debugger)
 {
     static int general[] = { 0, 3, 1, 2 };
     struct registers *regs = debugger->register_history + debugger->register_history_usage;
@@ -117,13 +117,27 @@ void update_tex_debugger(SDL_Texture *texture, struct debugger *debugger)
 		  " 0x%04X ", regs->ip);
 }
 
+void update_tex_disassembly(SDL_Texture *texture, struct debugger *debugger)
+{
+    SDL_SetRenderTarget(renderer, texture);
+    SDL_SetRenderDrawColor(renderer, 64, 64, 64, 255);
+    SDL_RenderClear(renderer);
+    for (int i = 0; i < 10; i++) {
+	sdlprintf(renderer, 0, 16*i,
+		  &(struct colour){ 255, 200, 200, 200 },
+		  NULL,
+		  debugger->disassembly[i]);
+    }
+}
+
 
 int gui_loop()
 {
-    SDL_Texture *tex_screen, *tex_debugger_bg, *tex_debugger_fg;
+    SDL_Texture *tex_screen, *tex_regview_bg, *tex_regview_fg, *tex_disassembly;
     SDL_Event event;
     SDL_Rect screen_rect = { 0, 0, 320, 240};
-    SDL_Rect debugger_rect = { 320, 0, 320, 240};
+    SDL_Rect rect_regview = { 320, 240, 320, 240};
+    SDL_Rect rect_disassembly = { 320, 0, 320, 240};
     struct registers regs;
     pthread_t emulator;
     int tret = pthread_create(&emulator, NULL, mb_run, (void *)mb);
@@ -133,16 +147,17 @@ int gui_loop()
 	return 100;
     }
     tex_screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    tex_debugger_bg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    tex_debugger_fg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    if (!tex_screen || !tex_debugger_bg || !tex_debugger_fg) {
+    tex_regview_bg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    tex_regview_fg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    tex_disassembly = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    if (!tex_screen || !tex_regview_bg || !tex_regview_fg) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s", SDL_GetError());
         return 3;
     }
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(tex_debugger_fg, SDL_BLENDMODE_BLEND);
-    init_tex_debugger(tex_debugger_bg);
+    SDL_SetTextureBlendMode(tex_regview_fg, SDL_BLENDMODE_BLEND);
+    init_tex_regview(tex_regview_bg);
     
     float i = 0;
     while (1) {
@@ -167,16 +182,18 @@ int gui_loop()
 	if (debugger->step != mb->step) {
 	    printf("Stuff!\n");
 	    debugger_step(debugger);
-	    update_tex_debugger(tex_debugger_fg, debugger);
+	    update_tex_regview(tex_regview_fg, debugger);
+	    update_tex_disassembly(tex_disassembly, debugger);
 	}
 	
 	SDL_SetRenderTarget(renderer, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, tex_screen, NULL, &screen_rect);
-	SDL_SetTextureBlendMode(tex_debugger_fg, SDL_BLENDMODE_BLEND);
-	SDL_RenderCopy(renderer, tex_debugger_bg, NULL, &debugger_rect);
-	SDL_RenderCopy(renderer, tex_debugger_fg, NULL, &debugger_rect);
+	SDL_SetTextureBlendMode(tex_regview_fg, SDL_BLENDMODE_BLEND);
+	SDL_RenderCopy(renderer, tex_regview_bg, NULL, &rect_regview);
+	SDL_RenderCopy(renderer, tex_regview_fg, NULL, &rect_regview);
+	SDL_RenderCopy(renderer, tex_disassembly, NULL, &rect_disassembly);
 	SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0xFF, 0x00);
         SDL_RenderPresent(renderer);
     }

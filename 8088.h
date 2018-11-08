@@ -59,4 +59,6 @@ int biu_handle_prefetch(struct iapx88 *cpu);
 int biu_make_request(struct iapx88 *cpu);
 int biu_handle_response(struct iapx88 *cpu);
 
+uint32_t ea(uint16_t segment, uint16_t offset);
+
 #endif

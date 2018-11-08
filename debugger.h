@@ -23,6 +23,9 @@ struct debugger {
     struct iapx88 *cpu;
     struct registers *register_history;
     int register_history_size, register_history_start, register_history_usage;
+
+    char *disassembly[100];
+
     int step;
 };
 

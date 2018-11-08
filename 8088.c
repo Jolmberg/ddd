@@ -165,9 +165,11 @@ uint16_t word_from_bytes(uint8_t *bytes)
     return bytes[0] | (bytes[1] << 8);
 }
 
-void cleanup(struct iapx88 *cpu)
+void cleanup(struct iapx88 *cpu, int no_ip_adjustment)
 {
-    cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
+    if (!no_ip_adjustment) {
+	cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
+    }
     cpu->cur_inst_len = 99;
     cpu->cur_inst_read = 0;
     cpu->segment_override = -1;
@@ -217,12 +219,12 @@ int iapx88_step(struct iapx88 *cpu)
 		cpu->prefetch_size = 0;
 		cpu->prefetch_ip = cpu->ip;
                 cpu->prefetch_forbidden = 1;
-		cleanup(cpu);
+		cleanup(cpu, 1);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 15;
 	    case 0xFA: /* CLI */
 		cpu->flags &= 0xFDFF;
-		cleanup(cpu);
+		cleanup(cpu, 0);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 2;
             case 0xB0:
@@ -236,12 +238,12 @@ int iapx88_step(struct iapx88 *cpu)
 		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
 		//printf("Reg: %d\n", cpu->cur_inst[0] & 7);
                 cpu->reg8[cpu->reg] = cpu->cur_inst[1];
-                cleanup(cpu);
+                cleanup(cpu, 0);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;
                 return 4;
             case 0x9E: /* SAHF */
                 cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
-                cleanup(cpu);
+                cleanup(cpu, 1);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;
                 return 4;
 	    default:

@@ -5,6 +5,6 @@
 
 #include "motherboard.h"
 
-int disassemble(char **buffer, struct motherboard *mb, uint32_t address, int max_lines);
+int disassemble_from_address(char **buffer, struct motherboard *mb, uint32_t address, int max_lines);
 
 #endif
