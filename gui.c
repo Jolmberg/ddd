@@ -122,8 +122,12 @@ void update_tex_disassembly(SDL_Texture *texture, struct debugger *debugger)
     SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 64, 64, 64, 255);
     SDL_RenderClear(renderer);
-    for (int i = 0; i < 10; i++) {
-	sdlprintf(renderer, 0, 16*i,
+    for (int i = 0; i < 15; i++) {
+        sdlprintf(renderer, 0, 16*i,
+                  &(struct colour){ 255, 170, 170, 170 },
+                  &(struct colour){ 255, 50, 50, 50 },
+                  " 0x%05x: ", debugger->disassembly_addresses[i]);
+	sdlprintf(renderer, 11*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200 },
 		  NULL,
 		  debugger->disassembly[i]);

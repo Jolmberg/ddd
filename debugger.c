@@ -47,7 +47,7 @@ void debugger_step(struct debugger *d)
 {
     copy_cpu_regs(d);
     printf("regs copied\n");
-    disassemble_from_address(d->disassembly, d->mb, ea(d->cpu->cs, d->cpu->ip), 100);
+    disassemble_from_address(d->disassembly, d->disassembly_addresses, d->mb, ea(d->cpu->cs, d->cpu->ip), 100);
     printf("Disassemblerdd!\n");
     /* for (int i = 0; i < 10; i++) { */
     /* 	printf("brosk: %s\n", d->disassembly[i]); */

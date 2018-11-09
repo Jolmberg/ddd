@@ -25,6 +25,7 @@ struct debugger {
     int register_history_size, register_history_start, register_history_usage;
 
     char *disassembly[100];
+    uint32_t disassembly_addresses[100];
 
     int step;
 };
