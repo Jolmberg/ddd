@@ -72,7 +72,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint32_t
                 int list = format[1] - '0';
                 int number = mb_memory_peek(mb, address + operand);
                 number = (number >> 3) & 7;
-                int p = sprintf(buffer, extended[list][number]);
+                int p = sprintf(buffer, "%s", extended[list][number]);
                 buffer += p;
                 format += 2;
             } else {
