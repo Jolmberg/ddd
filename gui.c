@@ -69,52 +69,68 @@ void init_tex_regview(SDL_Texture *d)
 	sdlprintf(renderer, 0, 16*i,
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 0, 0, 160 - 32*i},
-		  " %cX         ", 'A' + i);
-	sdlprintf(renderer, 12*9, 16*i,
+		  " %cX        ", 'A' + i);
+	sdlprintf(renderer, 11*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 160 - 32*i, 0, 0},
-		  " %s         ", indices[i]);
-	sdlprintf(renderer, 24*9, 16*i,
+		  " %s        ", indices[i]);
+	sdlprintf(renderer, 22*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200},
 		  &(struct colour){ 255, 0, 160 - 32*i, 0},
-		  " %s         ", segments[i]);
+		  " %s        ", segments[i]);
     }
     sdlprintf(renderer, 0, 64,
 	      &(struct colour){ 255, 200, 200, 200},
 	      &(struct colour){ 255, 100, 0, 100},
-	      " IP         ");
+	      " IP        ");
     /* sdlprintf(renderer, 12*9, 64, */
     /* 	      &(struct colour){ 255, 200, 200, 200}, */
     /* 	      &(struct colour){ 255, 160, 100, 0}, */
     /* 	      " PF                     "); */
+    sdlprintf(renderer, 0, 80,
+              &(struct colour){ 255, 50, 50, 50},
+              &(struct colour){ 255, 120, 120, 0},
+              " OF DF IF TF SF ZF AF PF CF ");
 }
 	
 void update_tex_regview(SDL_Texture *texture, struct debugger *debugger)
 {
-    static int general[] = { 0, 3, 1, 2 };
+    const int general[4] = { 0, 3, 1, 2 };
+    const char flagname[9][3] = { "OF", "DF", "IF", "TF", "SF", "ZF", "AF", "PF", "CF" };
+    const int flagpos[9] = { 2048, 1024, 512, 256, 128, 64, 16, 4, 0 };
     struct registers *regs = debugger->register_history + debugger->register_history_usage;
     SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     printf("ip: %d\n", debugger->cpu->ip);
     for (int i = 0; i < 4; i++) {
-	sdlprintf(renderer, 4*9, 16*i,
+	sdlprintf(renderer, 3*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200 },
 		  NULL,
-		  " 0x%04X ", regs->reg16[general[i]]);
-	sdlprintf(renderer, 16*9, 16*i,
+		  " 0x%04x ", regs->reg16[general[i]]);
+	sdlprintf(renderer, 14*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200 },
 		  NULL,
-		  " 0x%04X ", regs->reg16[4+i]);
-	sdlprintf(renderer, 28*9, 16*i,
+		  " 0x%04x ", regs->reg16[4+i]);
+	sdlprintf(renderer, 25*9, 16*i,
 		  &(struct colour){ 255, 200, 200, 200 },
 		  NULL,
-		  " 0x%04X ", regs->segreg[i]);
+		  " 0x%04x ", regs->segreg[i]);
     }
-    sdlprintf(renderer, 4*9, 64,
-		  &(struct colour){ 255, 200, 200, 200 },
-		  NULL,
-		  " 0x%04X ", regs->ip);
+    sdlprintf(renderer, 3*9, 64,
+              &(struct colour){ 255, 200, 200, 200 },
+              NULL,
+              " 0x%04x ", regs->ip);
+    for (int i = 0; i < 9; i++) {
+        if (regs->flags & flagpos[i]) {
+            sdlprintf(renderer, i*27 + 9, 80,
+                      &(struct colour){ 255, 200, 200, 200 },
+                      NULL,
+                      "%s", flagname[i]);
+        }
+    }
+
+
 }
 
 void update_tex_disassembly(SDL_Texture *texture, struct debugger *debugger)
