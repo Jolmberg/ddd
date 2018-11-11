@@ -97,15 +97,23 @@ void update_tex_regview(SDL_Texture *texture, struct debugger *debugger)
 {
     const int general[4] = { 0, 3, 1, 2 };
     const char flagname[9][3] = { "OF", "DF", "IF", "TF", "SF", "ZF", "AF", "PF", "CF" };
-    const int flagpos[9] = { 2048, 1024, 512, 256, 128, 64, 16, 4, 0 };
-    struct registers *regs = debugger->register_history + debugger->register_history_usage;
+    const int flagpos[9] = { 2048, 1024, 512, 256, 128, 64, 16, 4, 1 };
+    struct registers *regs = debugger_get_cpu_regs(debugger, 0);
+    struct registers *lastregs = NULL;
+    struct iapx88 *cpu = debugger->cpu;
     SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
-    printf("ip: %d\n", debugger->cpu->ip);
+    if (debugger->register_history_usage > 1) {
+        lastregs = debugger_get_cpu_regs(debugger, 1);
+    } else {
+        lastregs = regs;
+    }
+    /*     lasgregs = debugger->register_history + debugger->register_history_usage */
     for (int i = 0; i < 4; i++) {
+        int j = general[i];
 	sdlprintf(renderer, 3*9, 16*i,
-		  &(struct colour){ 255, 200, 200, 200 },
+		  (regs->reg16[j] == lastregs->reg16[j]) ? &(struct colour){ 255, 200, 200, 200 } : &(struct colour){ 255, 255, 255, 0 },
 		  NULL,
 		  " 0x%04x ", regs->reg16[general[i]]);
 	sdlprintf(renderer, 14*9, 16*i,
@@ -129,6 +137,14 @@ void update_tex_regview(SDL_Texture *texture, struct debugger *debugger)
                       "%s", flagname[i]);
         }
     }
+    for (int i = 0; i < cpu->prefetch_usage; i++) {
+        sdlprintf(renderer, i*6*9, 96,
+                  &(struct colour){ 255, 200, 200, 200 },
+                  &(struct colour){ 255, 0, 160, 160 },
+                  " 0x%02x ",
+                  cpu->prefetch_queue[(cpu->prefetch_start + i) & 3]);
+    }
+
 
 
 }
@@ -201,7 +217,6 @@ int gui_loop()
 
 	update_tex_title(tex_screen);
 	if (debugger->step != mb->step) {
-	    printf("Stuff!\n");
 	    debugger_step(debugger);
 	    update_tex_regview(tex_regview_fg, debugger);
 	    update_tex_disassembly(tex_disassembly, debugger);

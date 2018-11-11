@@ -17,7 +17,7 @@ enum flags { FLAG_OF=2048,
              FLAG_ZF=64,
              FLAG_AF=16,
              FLAG_PF=4,
-             FLAG_CF=0 };
+             FLAG_CF=1 };
 
 struct iapx88 {
     // Registers
@@ -40,8 +40,8 @@ struct iapx88 {
 
     // BIU stuff
     uint8_t prefetch_queue[4];
-    int prefetch_size;
-    int prefetch_offset;
+    int prefetch_usage;
+    int prefetch_start;
     int prefetch_forbidden;
     enum bus_state bus_state;
 

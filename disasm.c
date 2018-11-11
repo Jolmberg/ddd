@@ -21,7 +21,7 @@ char instr_format[256][20] =
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "jae $1b", "", "jne $1b", "", "", "", "jns $1i8", "", "jnp $1i8", "", "", "", "",
+    "", "", "", "jae $1b", "", "jne $1b", "", "", "", "jns $1b", "", "jnp $1b", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "sahf", "lahf",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -93,7 +93,6 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
                 int modxxxrm = mb_memory_peek(mb, segment, offset + operand);
-                printf("N8!! addr %x, %x\n", address, modxxxrm);
                 int p = 0;
                 switch(modxxxrm >> 6) {
                 case 3:

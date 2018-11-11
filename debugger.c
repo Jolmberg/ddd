@@ -10,17 +10,23 @@
 #include "disasm.h"
 #include "8088.h"
 
-void copy_cpu_regs(struct debugger *d)
+void debugger_copy_cpu_regs(struct debugger *d)
 {
     struct iapx88 *cpu = d->cpu;
     int index = (d->register_history_start + d->register_history_usage) % d->register_history_size;
     if (d->register_history_usage == d->register_history_size) {
 	d->register_history_start = (d->register_history_start + 1) % d->register_history_size;
     } else {
-	d->register_history_size++;
+	d->register_history_usage++;
     }
     struct registers *regs = d->register_history + index;
     memcpy(regs, cpu, sizeof(struct registers));
+}
+
+struct registers *debugger_get_cpu_regs(struct debugger *d, int boffset)
+{
+    int index = (d->register_history_start + d->register_history_usage + d->register_history_size - boffset - 1) % d->register_history_size;
+    return d->register_history + index;
 }
 
 struct debugger *debugger_create(struct motherboard *mb)
@@ -45,10 +51,8 @@ struct debugger *debugger_create(struct motherboard *mb)
 
 void debugger_step(struct debugger *d)
 {
-    copy_cpu_regs(d);
-    printf("regs copied\n");
+    debugger_copy_cpu_regs(d);
     disassemble_from_address(d->disassembly, d->disassembly_addresses, d->mb, d->cpu->cs, d->cpu->ip, 100);
-    printf("Disassemblerdd!\n");
     /* for (int i = 0; i < 10; i++) { */
     /* 	printf("brosk: %s\n", d->disassembly[i]); */
     /* } */

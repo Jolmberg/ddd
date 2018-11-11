@@ -61,6 +61,8 @@ void *mb_run(void *mbarg)
                     biu_cycles += biu_handle_prefetch(cpu);
                 }
             }
+            printf("BIU prefetched for %d cycles\n", biu_cycles);
+        } else {
             cpu->prefetch_forbidden = 0;
         }
 

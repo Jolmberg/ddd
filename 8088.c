@@ -17,7 +17,7 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -101,8 +101,8 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->es = 0;
 
     cpu->control_bus_state = BUS_NONE;
-    cpu->prefetch_size = 0;
-    cpu->prefetch_offset = 0;
+    cpu->prefetch_usage = 0;
+    cpu->prefetch_start = 0;
     cpu->state = CPU_FETCH;
     cpu->cur_inst_read = 0;
     cpu->cur_inst_len = 99;
@@ -130,9 +130,9 @@ void check_segment_override(struct iapx88 *cpu, uint8_t b)
 
 void take_instruction_byte_from_prefetch(struct iapx88 *cpu)
 {
-    uint8_t b = cpu->prefetch_queue[cpu->prefetch_offset];
-    cpu->prefetch_offset = (cpu->prefetch_offset + 1) & 3;
-    cpu->prefetch_size--;
+    uint8_t b = cpu->prefetch_queue[cpu->prefetch_start];
+    cpu->prefetch_start = (cpu->prefetch_start + 1) & 3;
+    cpu->prefetch_usage--;
     check_segment_override(cpu, b);
 }
 
@@ -148,9 +148,9 @@ int want_more_instruction_bytes(struct iapx88 *cpu)
 }
 
 void prefetch_queue_add(struct iapx88 *cpu) {
-    int index = (cpu->prefetch_offset + cpu->prefetch_size) & 3;
+    int index = (cpu->prefetch_start + cpu->prefetch_usage) & 3;
     cpu->prefetch_queue[index] = cpu->data_pins;
-    cpu->prefetch_size++;
+    cpu->prefetch_usage++;
 }
 
 uint16_t word_from_bytes(uint8_t *bytes)
@@ -158,15 +158,21 @@ uint16_t word_from_bytes(uint8_t *bytes)
     return bytes[0] | (bytes[1] << 8);
 }
 
-void cleanup(struct iapx88 *cpu, int no_ip_adjustment)
+// An instruction has finished executing, reset the state machine
+void cleanup(struct iapx88 *cpu, int jumped)
 {
-    if (!no_ip_adjustment) {
+    if (jumped) {
+        cpu->prefetch_usage = 0;
+        cpu->prefetch_ip = cpu->ip;
+        cpu->prefetch_forbidden = 1;
+    } else {
 	cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
     }
     cpu->cur_inst_len = 99;
     cpu->cur_inst_read = 0;
     cpu->segment_override = -1;
     cpu->state = CPU_FETCH;
+    cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
 int branch(struct iapx88 *cpu, int taken)
@@ -175,11 +181,8 @@ int branch(struct iapx88 *cpu, int taken)
     if (taken) {
         cpu->ip = cpu->ip + cpu->cur_inst[1] + 2;
         cycles += 12;
-        cpu->prefetch_size = 0;
-        cpu->prefetch_ip = cpu->ip;
-        cpu->prefetch_forbidden = 1;
     }
-    cleanup(cpu, 1);
+    cleanup(cpu, taken);
     cpu->return_reason = WAIT_INTERRUPTIBLE;
     return cycles;
 }
@@ -190,9 +193,8 @@ int iapx88_step(struct iapx88 *cpu)
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
-	    printf("fetching\n");
 	    while (want_more_instruction_bytes(cpu)) {
-		if (cpu->prefetch_size > 0) {
+		if (cpu->prefetch_usage > 0) {
                     printf("Yay, prefetched!\n");
 		    take_instruction_byte_from_prefetch(cpu);
 		} else {
@@ -211,15 +213,19 @@ int iapx88_step(struct iapx88 *cpu)
 	    cpu->state = CPU_DECODE;
 	    break;
 	case CPU_DECODE:
-	    printf("decode\n");
-            printf("Instruction: ");
             print_instruction(cpu);
 	    if (cpu->cur_inst_len == 0) {
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
             case 0x73:
-                return branch(cpu, cpu->flags & FLAG_CF);
+                return branch(cpu, !(cpu->flags & FLAG_CF));
+            case 0x75:
+                return branch(cpu, !(cpu->flags & FLAG_CF));
+            case 0x79:
+                return branch(cpu, !(cpu->flags & FLAG_SF));
+            case 0x7b:
+                return branch(cpu, !(cpu->flags & FLAG_PF));
             case 0xB0:
             case 0xB1:
             case 0xB2:
@@ -229,27 +235,23 @@ int iapx88_step(struct iapx88 *cpu)
             case 0xB6:
             case 0xB7: /* MOV reg8, immediate */
 		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
-		//printf("Reg: %d\n", cpu->cur_inst[0] & 7);
                 cpu->reg8[cpu->reg] = cpu->cur_inst[1];
                 cleanup(cpu, 0);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
                 return 4;
             case 0x9E: /* SAHF */
                 cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
                 cleanup(cpu, 0);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
+                return 4;
+            case 0x9F: /* LAHF */
+                cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
+                cleanup(cpu, 0);
                 return 4;
 	    case 0xEA: /* JMP direct intersegment */
 		word1 = word_from_bytes(cpu->cur_inst + 1);
 		word2 = word_from_bytes(cpu->cur_inst + 3);
-                print_instruction(cpu);
 		cpu->cs = word2;
 		cpu->ip = word1;
-		cpu->prefetch_size = 0;
-		cpu->prefetch_ip = cpu->ip;
-                cpu->prefetch_forbidden = 1;
 		cleanup(cpu, 1);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 15;
 	    case 0xFA: /* CLI */
 		cpu->flags &= 0xFDFF;
@@ -276,7 +278,7 @@ int iapx88_step(struct iapx88 *cpu)
 
 int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
 {
-    if (cpu->prefetch_size == 4) {
+    if (cpu->prefetch_usage == 4) {
 	return max_cycles;
     }
     switch (cpu->bus_state) {
@@ -305,9 +307,9 @@ int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
 
 int biu_handle_prefetch(struct iapx88 *cpu)
 {
-    int index = (cpu->prefetch_offset + cpu->prefetch_size) & 3;
+    int index = (cpu->prefetch_start + cpu->prefetch_usage) & 3;
     cpu->prefetch_queue[index] = cpu->data_pins;
-    cpu->prefetch_size++;
+    cpu->prefetch_usage++;
     cpu->bus_state = BUS_IDLE;
     cpu->control_bus_state = BUS_NONE;
     return 1;

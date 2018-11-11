@@ -32,5 +32,7 @@ struct debugger {
 
 struct debugger *debugger_create(struct motherboard *mb);
 void debugger_step(struct debugger *debugger);
+struct registers *debugger_get_cpu_regs(struct debugger *d, int boffset);
+
 
 #endif
