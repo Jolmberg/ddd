@@ -9,8 +9,6 @@
 
 #include "8088.h"
 
-#define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
-
 const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,

@@ -1,12 +1,13 @@
 #include <string.h>
+#include <stdint.h>
 
 #include "disasm.h"
-
-#define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
+#include "8088.h"
 
 /* Variable format: $(operand position)(operand type)
    Types: i8 - byte
           i16 - word
+          b - branch (cs:(ip + operand))
           oN - opcode name is in extended list N at index given by the next byte
           n8 - modxxxr/m byte 8 bit registers
           n16 - modxxxr/m byte 16 bit registers
@@ -20,7 +21,7 @@ char instr_format[256][20] =
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "jae $1i8", "", "jne $1i8", "", "", "", "jns $1i8", "", "jnp $1i8", "", "", "", "",
+    "", "", "", "jae $1b", "", "jne $1b", "", "", "", "jns $1i8", "", "jnp $1i8", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "sahf", "lahf",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -38,14 +39,16 @@ const char extended[1][8][5] =
 
 const char register_name_8[8][3] = { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
 
-int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint32_t address) {
+int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t segment, uint16_t offset) {
     int segment_override = -1;
-    uint8_t b = mb_memory_peek(mb, address);
+    uint32_t address = EA(segment, offset);
+    uint8_t b = mb_memory_peek(mb, segment, offset);
     if (IS_SEGMENT_OVERRIDE(b)) {
 	segment_override = b;
-	b = mb_memory_peek(mb, ++address);
+        offset++;
+	b = mb_memory_peek(mb, segment, offset);
     }
-    char *format = instr_format[mb_memory_peek(mb, address)];
+    char *format = instr_format[mb_memory_peek(mb, segment, offset)];
     int i;
     int operand_distance = 0;
     int max_distance = 0;
@@ -54,7 +57,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint32_t
             b = segment_override;
         }
         sprintf(buffer, ".byte %x", b);
-        return address + 1;
+        return 1;
     }
     while (format[0]) {
         if (format[0] != '$') {
@@ -66,25 +69,30 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint32_t
             operand_distance = operand;
             format += 2;
             if (!strncmp(format, "i8", 2)) {
-                int p = sprintf(buffer, "0x%x", mb_memory_peek(mb, address + operand));
+                int p = sprintf(buffer, "0x%x", mb_memory_peek(mb, segment, offset + operand));
                 buffer += p;
                 format += 2;
             } else if (!strncmp(format, "i16", 3)) {
                 operand_distance++;
-                int word = mb_memory_peek(mb, address + operand)
-                    | (mb_memory_peek(mb, address + operand + 1) << 8);
+                uint16_t word = mb_memory_peek(mb, segment, offset + operand)
+                    | (mb_memory_peek(mb, segment, offset + operand + 1) << 8);
                 int p = sprintf(buffer, "0x%x", word);
                 buffer += p;
                 format += 3;
+            } else if (!strncmp(format, "b", 1)) {
+                uint16_t word = offset + mb_memory_peek(mb, segment, offset + operand) + 2;
+                int p = sprintf(buffer, "0x%x", EA(segment, word));
+                buffer += p;
+                format += 1;
             } else if (!strncmp(format, "o", 1)) {
                 int list = format[1] - '0';
-                int number = mb_memory_peek(mb, address + operand);
+                int number = mb_memory_peek(mb, segment, offset + operand);
                 number = (number >> 3) & 7;
                 int p = sprintf(buffer, "%s", extended[list][number]);
                 buffer += p;
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
-                int modxxxrm = mb_memory_peek(mb, address + operand);
+                int modxxxrm = mb_memory_peek(mb, segment, offset + operand);
                 printf("N8!! addr %x, %x\n", address, modxxxrm);
                 int p = 0;
                 switch(modxxxrm >> 6) {
@@ -103,17 +111,31 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint32_t
         }
     }
     buffer[0] = format[0];
-    return address + 1 + max_distance;
+    return 1 + max_distance + (segment_override >= 0);
 }
 
-int disassemble_from_address(char **buffer, uint32_t *addresses, struct motherboard *mb, uint32_t address, int max_lines)
+int disassemble_from_address(char **buffer, uint32_t *addresses, struct motherboard *mb, uint16_t segment, uint16_t offset, int max_lines)
 {
     int line;
+    uint32_t address;
+    uint16_t new_offset;
+    uint16_t new_segment;
     for (int line = 0; line < max_lines; line++) {
+        address = EA(segment, offset);
         addresses[line] = address;
-	address = sprint_instruction_at_address(buffer[line], mb, address);
-	if (address == 0) {
-	    return line + 1;
+        new_offset = offset + sprint_instruction_at_address(buffer[line], mb, segment, offset);
+
+        if (new_offset < offset) {
+            new_segment = segment + 0x1000;
+            if (new_segment < segment) {
+                return line + 1;
+            }
+            segment = new_segment;
+        }
+        offset = new_offset;
+
+        if (address == 0) {
+            return line + 1;
 	}
     }
     return line;

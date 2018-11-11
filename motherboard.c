@@ -7,6 +7,7 @@
 #endif
 
 #include "motherboard.h"
+#include "8088.h"
 
 int access_memory(struct motherboard *mb, struct iapx88 *cpu)
 {
@@ -27,10 +28,15 @@ int access_memory(struct motherboard *mb, struct iapx88 *cpu)
     return 0;
 }
 
-uint8_t mb_memory_peek(struct motherboard *mb, uint32_t address)
+uint8_t mb_memory_peek_absolute(struct motherboard *mb, uint32_t address)
 {
     // Do smart stuff here if needed
     return mb->ram[address];
+}
+
+uint8_t mb_memory_peek(struct motherboard *mb, uint16_t segment, uint16_t offset)
+{
+    return mb_memory_peek_absolute(mb, EA(segment, offset));
 }
 
 void *mb_run(void *mbarg)
