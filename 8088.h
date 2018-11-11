@@ -9,6 +9,15 @@ enum control_bus_state { BUS_INTA, BUS_IOREAD, BUS_IOWRITE, BUS_HALT, BUS_FETCH,
 enum state { CPU_IDLE, CPU_FETCH, CPU_DECODE, CPU_MEMREAD, CPU_MEMWRITE };
 enum bus_state { BUS_IDLE, BUS_T1, BUS_T2, BUS_T3, BUS_T4, BUS_TW };
 enum return_reason { NO_REASON, WAIT_BIU, WAIT_INTERRUPTIBLE };
+enum flags { FLAG_OF=2048,
+             FLAG_DF=1024,
+             FLAG_IF=512,
+             FLAG_TF=256,
+             FLAG_SF=128,
+             FLAG_ZF=64,
+             FLAG_AF=16,
+             FLAG_PF=4,
+             FLAG_CF=0 };
 
 struct iapx88 {
     // Registers

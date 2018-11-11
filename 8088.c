@@ -153,11 +153,6 @@ void prefetch_queue_add(struct iapx88 *cpu) {
     cpu->prefetch_size++;
 }
 
-uint32_t ea(uint16_t segment, uint16_t offset)
-{
-    return (segment << 4) + offset;
-}
-
 uint16_t word_from_bytes(uint8_t *bytes)
 {
     return bytes[0] | (bytes[1] << 8);
@@ -172,6 +167,21 @@ void cleanup(struct iapx88 *cpu, int no_ip_adjustment)
     cpu->cur_inst_read = 0;
     cpu->segment_override = -1;
     cpu->state = CPU_FETCH;
+}
+
+int branch(struct iapx88 *cpu, int taken)
+{
+    int cycles = 4;
+    if (taken) {
+        cpu->ip = cpu->ip + cpu->cur_inst[1] + 2;
+        cycles += 12;
+        cpu->prefetch_size = 0;
+        cpu->prefetch_ip = cpu->ip;
+        cpu->prefetch_forbidden = 1;
+    }
+    cleanup(cpu, 1);
+    cpu->return_reason = WAIT_INTERRUPTIBLE;
+    return cycles;
 }
 
 int iapx88_step(struct iapx88 *cpu)
@@ -208,6 +218,27 @@ int iapx88_step(struct iapx88 *cpu)
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
+            case 0x73:
+                return branch(cpu, cpu->flags & FLAG_CF);
+            case 0xB0:
+            case 0xB1:
+            case 0xB2:
+            case 0xB3:
+            case 0xB4:
+            case 0xB5:
+            case 0xB6:
+            case 0xB7: /* MOV reg8, immediate */
+		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
+		//printf("Reg: %d\n", cpu->cur_inst[0] & 7);
+                cpu->reg8[cpu->reg] = cpu->cur_inst[1];
+                cleanup(cpu, 0);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
+                return 4;
+            case 0x9E: /* SAHF */
+                cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+                cleanup(cpu, 0);
+		cpu->return_reason = WAIT_INTERRUPTIBLE;
+                return 4;
 	    case 0xEA: /* JMP direct intersegment */
 		word1 = word_from_bytes(cpu->cur_inst + 1);
 		word2 = word_from_bytes(cpu->cur_inst + 3);
@@ -225,25 +256,6 @@ int iapx88_step(struct iapx88 *cpu)
 		cleanup(cpu, 0);
 		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 2;
-            case 0xB0:
-            case 0xB1:
-            case 0xB2:
-            case 0xB3:
-            case 0xB4:
-            case 0xB5:
-            case 0xB6:
-            case 0xB7: /* MOV reg8, immediate */
-		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
-		//printf("Reg: %d\n", cpu->cur_inst[0] & 7);
-                cpu->reg8[cpu->reg] = cpu->cur_inst[1];
-                cleanup(cpu, 0);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
-                return 4;
-            case 0x9E: /* SAHF */
-                cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
-                cleanup(cpu, 1);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
-                return 4;
 	    default:
 		printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);
 		return -1;
@@ -271,7 +283,7 @@ int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
     case BUS_IDLE:
 	cpu->control_bus_state = BUS_FETCH;
 	cpu->bus_state = BUS_T3;
-	cpu->address_pins = ea(cpu->cs, cpu->prefetch_ip++);
+	cpu->address_pins = EA(cpu->cs, cpu->prefetch_ip++);
 	return 3;
     case BUS_T1:
 	cpu->bus_state = BUS_T3;
@@ -304,7 +316,7 @@ int biu_handle_prefetch(struct iapx88 *cpu)
 int biu_make_request(struct iapx88 *cpu)
 {
     cpu->control_bus_state = cpu->eu_wanted_control_bus_state;
-    cpu->address_pins = ea(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
+    cpu->address_pins = EA(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
     if (cpu->control_bus_state == BUS_MEMWRITE) {
 	cpu->data_pins = cpu->eu_biu_byte;
     }
