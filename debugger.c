@@ -39,10 +39,13 @@ struct debugger *debugger_create(struct motherboard *mb)
     d->register_history_start = 0;
     d->register_history = (struct registers *)malloc(sizeof(struct registers) * d->register_history_size);
 
-    char *buffer = (char *)malloc(sizeof(char)*20*100);
+    char *buffer = (char *)malloc(sizeof(char) * 20 * 100);
+    uint8_t *bytes = (uint8_t *)malloc(sizeof(uint8_t) * 7 * 100);
     for (int i = 0; i < 100; i++) {
 	d->disassembly[i] = buffer;
 	buffer += 20;
+	d->bytes[i] = bytes;
+	bytes +=7;
     }
 
     d->step = mb->step;
@@ -52,7 +55,7 @@ struct debugger *debugger_create(struct motherboard *mb)
 void debugger_step(struct debugger *d)
 {
     debugger_copy_cpu_regs(d);
-    disassemble_from_address(d->disassembly, d->disassembly_addresses, d->mb, d->cpu->cs, d->cpu->ip, 100);
+    disassemble_from_address(d->disassembly, d->disassembly_addresses, d->lengths, d->bytes, d->mb, d->cpu->cs, d->cpu->ip, 100);
     /* for (int i = 0; i < 10; i++) { */
     /* 	printf("brosk: %s\n", d->disassembly[i]); */
     /* } */

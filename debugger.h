@@ -26,6 +26,8 @@ struct debugger {
 
     char *disassembly[100];
     uint32_t disassembly_addresses[100];
+    int lengths[100];
+    uint8_t *bytes[100];
 
     int step;
 };

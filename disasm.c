@@ -113,7 +113,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
     return 1 + max_distance + (segment_override >= 0);
 }
 
-int disassemble_from_address(char **buffer, uint32_t *addresses, struct motherboard *mb, uint16_t segment, uint16_t offset, int max_lines)
+int disassemble_from_address(char **buffer, uint32_t *addresses, int *lengths, uint8_t **bytes, struct motherboard *mb, uint16_t segment, uint16_t offset, int max_lines)
 {
     int line;
     uint32_t address;
@@ -122,7 +122,13 @@ int disassemble_from_address(char **buffer, uint32_t *addresses, struct motherbo
     for (int line = 0; line < max_lines; line++) {
         address = EA(segment, offset);
         addresses[line] = address;
-        new_offset = offset + sprint_instruction_at_address(buffer[line], mb, segment, offset);
+	int length = sprint_instruction_at_address(buffer[line], mb, segment, offset);
+	lengths[line] = length;
+	for (int i = 0; i < length; i++) {
+	    bytes[line][i] = mb_memory_peek(mb, segment, offset + i);
+	}
+
+        new_offset = offset + length;
 
         if (new_offset < offset) {
             new_segment = segment + 0x1000;
