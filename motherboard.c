@@ -55,7 +55,7 @@ void *mb_run(void *mbarg)
 	cycles += eu_cycles;
         if (!cpu->prefetch_forbidden) {
             while (biu_cycles < eu_cycles) {
-                biu_cycles += biu_request_prefetch(cpu, cycles);
+                biu_cycles += biu_request_prefetch(cpu, eu_cycles - biu_cycles);
                 if (cpu->bus_state == BUS_T3) {
                     biu_cycles += access_memory(mb, cpu);
                     biu_cycles += biu_handle_prefetch(cpu);

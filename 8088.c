@@ -17,13 +17,13 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1,
+  1, 2, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
@@ -125,14 +125,23 @@ int branch(struct iapx88 *cpu, int taken)
         cycles += 12;
     }
     cleanup(cpu, taken);
-    cpu->return_reason = WAIT_INTERRUPTIBLE;
     return cycles;
 }
+
+void set_flag(struct iapx88 *cpu, uint16_t flag, int state)
+{
+    if (state) {
+        cpu->flags |= flag;
+    } else {
+        cpu->flags &= (0xFFFF ^ flag);
+    }
+}
+
 
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
-    uint8_t temp8;
+    uint8_t reg1, temp8;
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
@@ -160,10 +169,13 @@ int iapx88_step(struct iapx88 *cpu)
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
+            case 0x71:
+                return branch(cpu, !(cpu->flags & FLAG_OF));
             case 0x73:
+                printf("JAE!\n");
                 return branch(cpu, !(cpu->flags & FLAG_CF));
             case 0x75:
-                return branch(cpu, !(cpu->flags & FLAG_CF));
+                return branch(cpu, !(cpu->flags & FLAG_ZF));
             case 0x79:
                 return branch(cpu, !(cpu->flags & FLAG_SF));
             case 0x7b:
@@ -188,18 +200,30 @@ int iapx88_step(struct iapx88 *cpu)
                 cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
                 cleanup(cpu, 0);
                 return 4;
-	    case 0xD2: /* SHR reg8, cl */
-		switch(cpu->cur_inst[1] >> 6) {
-		case 3:
-		    temp8 = reg8index(cpu->cur_inst[1] & 7);
+	    case 0xD0: /* SHL r/m, 1 */
+		switch(cpu->cur_inst[1] & 0xC0) {
+		case 0xC0:
+		    reg1 = reg8index(cpu->cur_inst[1] & 7);
+                    temp8 = cpu->reg8[reg1] << 1;
+                    set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80));
+                    set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80));
+                    cpu->reg8[reg1] = temp8;
+		    cleanup(cpu, 0);
+                    return 2;
+		    break;
+		}
+		break;
+	    case 0xD2: /* SHR r/m, cl */
+		switch(cpu->cur_inst[1] & 0xC0) {
+		case 0xC0:
+		    reg1 = reg8index(cpu->cur_inst[1] & 7);
 		    if (cpu->cl > 0) {
-			cpu->reg8[temp8] >>= (cpu->cl - 1);
-			if (cpu->reg8[temp8] & 1) {
-			    cpu->flags = (cpu->flags & 0xFFFE) | (cpu->reg8[temp8] & 1);
-			}
-			cpu->reg8[temp8] >>=1;
+			cpu->reg8[reg1] >>= (cpu->cl - 1);
+                        set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1);
+			cpu->reg8[reg1] >>=1;
 		    }
 		    cleanup(cpu, 0);
+                    return 8 + 4 * cpu->cl;
 		    break;
 		}
 		break;
