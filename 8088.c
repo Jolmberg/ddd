@@ -23,7 +23,7 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
@@ -132,6 +132,7 @@ int branch(struct iapx88 *cpu, int taken)
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
+    uint8_t temp8;
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
@@ -187,6 +188,23 @@ int iapx88_step(struct iapx88 *cpu)
                 cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
                 cleanup(cpu, 0);
                 return 4;
+	    case 0xD2: /* SHR reg8, cl */
+		switch(cpu->cur_inst[1] >> 6) {
+		case 3:
+		    printf("MASK\n");
+		    temp8 = reg8index(cpu->cur_inst[1] & 7);
+		    if (cpu->cl > 0) {
+			cpu->reg8[temp8] >>= (cpu->cl - 1);
+			if (cpu->reg8[temp8] & 1) {
+			    cpu->flags = (cpu->flags & 0xFFFE) | (cpu->reg8[temp8] & 1);
+			}
+			cpu->reg8[temp8] >>=1;
+		    }
+		    cleanup(cpu, 0);
+		    break;
+		}
+		break;
+		    
 	    case 0xEA: /* JMP direct intersegment */
 		word1 = word_from_bytes(cpu->cur_inst + 1);
 		word2 = word_from_bytes(cpu->cur_inst + 3);
