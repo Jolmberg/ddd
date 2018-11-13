@@ -191,7 +191,6 @@ int iapx88_step(struct iapx88 *cpu)
 	    case 0xD2: /* SHR reg8, cl */
 		switch(cpu->cur_inst[1] >> 6) {
 		case 3:
-		    printf("MASK\n");
 		    temp8 = reg8index(cpu->cur_inst[1] & 7);
 		    if (cpu->cl > 0) {
 			cpu->reg8[temp8] >>= (cpu->cl - 1);
