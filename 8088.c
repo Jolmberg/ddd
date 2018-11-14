@@ -133,7 +133,6 @@ void set_flag(struct iapx88 *cpu, uint16_t flag, int state)
     }
 }
 
-
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
@@ -165,7 +164,22 @@ int iapx88_step(struct iapx88 *cpu)
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
-            case 0x71:
+            /* case 0x32: /\* xor modregrm (to reg)*\/ */
+            /*     modregrm = cpu->cur_inst[1]; */
+            /*     reg1 = cpu->reg8[REG8INDEX((modregrm >> 3) & 7)]; */
+            /*     switch (modregrm & 0xC0) { */
+            /*     case 0xC0: */
+            /*         reg2 = cpu->reg8[REG8INDEX(modregrm & 7)]; */
+            /*         temp = reg1 ^ reg2; */
+            /*         reg1 = temp; */
+
+            /*     } */
+            /*     set_flag(cpu, FLAG_CF, 0); */
+            /*     set_flag(cpu, FLAG_PF,  */
+            /*     set_flag(cpu, FLAG_SF, temp & 0x80); */
+            /*     set_flag(cpu, FLAG_OF, 0); */
+                
+            case 0x71: /* branches */
                 return branch(cpu, !(cpu->flags & FLAG_OF));
             case 0x73:
                 printf("JAE!\n");

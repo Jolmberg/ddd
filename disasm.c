@@ -71,42 +71,34 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
             operand_distance = operand;
             format += 2;
             if (!strncmp(format, "i8", 2)) {
-                int p = sprintf(buffer, "0x%x", mb_memory_peek(mb, segment, offset + operand));
-                buffer += p;
+                buffer += sprintf(buffer, "0x%x", mb_memory_peek(mb, segment, offset + operand));
                 format += 2;
             } else if (!strncmp(format, "i16", 3)) {
                 operand_distance++;
                 uint16_t word = mb_memory_peek(mb, segment, offset + operand)
                     | (mb_memory_peek(mb, segment, offset + operand + 1) << 8);
-                int p = sprintf(buffer, "0x%x", word);
-                buffer += p;
+                buffer += sprintf(buffer, "0x%x", word);
                 format += 3;
             } else if (!strncmp(format, "b", 1)) {
                 uint16_t word = offset + mb_memory_peek(mb, segment, offset + operand) + 2;
-                int p = sprintf(buffer, "0x%x", EA(segment, word));
-                buffer += p;
+                buffer += sprintf(buffer, "0x%x", EA(segment, word));
                 format += 1;
             } else if (!strncmp(format, "o", 1)) {
                 int list = format[1] - '0';
                 int number = mb_memory_peek(mb, segment, offset + operand);
                 number = (number >> 3) & 7;
-                int p = sprintf(buffer, "%s", extended[list][number]);
-                buffer += p;
+                buffer += sprintf(buffer, "%s", extended[list][number]);
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
                 modxxxrm = mb_memory_peek(mb, segment, offset + operand);
-                int p = 0;
-                switch(modxxxrm >> 6) {
-                case 3:
-                    p = sprintf(buffer, "%s", register_name_8[modxxxrm & 7]);
+                switch(modxxxrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", register_name_8[modxxxrm & 7]);
                     break;
                 }
-                buffer += p;
                 format += 2;
             } else if (!strncmp(format, "M8", 2)) {
-                printf("WOWOWOWOWKWKWKEKEKEKEKEK\n");
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                printf("modregrm: %d\n", modregrm);
                 buffer += sprintf(buffer, "%s, ", register_name_8[(modregrm >> 3) & 7]);
                 switch (modregrm & 0xC0) {
                 case 0xC0:
