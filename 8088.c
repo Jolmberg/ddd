@@ -54,10 +54,6 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
-int reg8index(int reg) {
-    return ((reg << 1) & 7) | (reg >> 2);
-}
-
 void check_segment_override(struct iapx88 *cpu, uint8_t b)
 {
     if ((cpu->cur_inst_read == 0) && IS_SEGMENT_OVERRIDE(b)) {
@@ -188,7 +184,7 @@ int iapx88_step(struct iapx88 *cpu)
             case 0xB5:
             case 0xB6:
             case 0xB7: /* MOV reg8, immediate */
-		cpu->reg = reg8index(cpu->cur_inst[0] & 7);
+		cpu->reg = REG8INDEX(cpu->cur_inst[0] & 7);
                 cpu->reg8[cpu->reg] = cpu->cur_inst[1];
                 cleanup(cpu, 0);
                 return 4;
@@ -203,7 +199,7 @@ int iapx88_step(struct iapx88 *cpu)
 	    case 0xD0: /* SHL r/m, 1 */
 		switch(cpu->cur_inst[1] & 0xC0) {
 		case 0xC0:
-		    reg1 = reg8index(cpu->cur_inst[1] & 7);
+		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);
                     temp8 = cpu->reg8[reg1] << 1;
                     set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80));
                     set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80));
@@ -216,7 +212,7 @@ int iapx88_step(struct iapx88 *cpu)
 	    case 0xD2: /* SHR r/m, cl */
 		switch(cpu->cur_inst[1] & 0xC0) {
 		case 0xC0:
-		    reg1 = reg8index(cpu->cur_inst[1] & 7);
+		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);
 		    if (cpu->cl > 0) {
 			cpu->reg8[reg1] >>= (cpu->cl - 1);
                         set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1);

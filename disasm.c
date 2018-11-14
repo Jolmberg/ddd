@@ -11,17 +11,18 @@
           oN - opcode name is in extended list N at index given by the next byte
           n8 - modxxxr/m byte 8 bit registers
           n16 - modxxxr/m byte 16 bit registers
-          m - modregr/m byte */
+          m8 - modregr/m byte 8 bit registers
+          M8 - modregr/m byte 16 bit registers reverse order */
 char instr_format[256][20] =
 {
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "xor $1M8", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "jno $1b", "", "jae $1b", "", "jne $1b", "", "", "", "jns $1b", "", "jnp $1b", "", "", "", "",
+    "", "jno $1b", "jb $1b", "jae $1b", "je $1b", "jne $1b", "", "", "js $1b", "jns $1b", "jp $1b", "jnp $1b", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "sahf", "lahf",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -52,6 +53,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
     int i;
     int operand_distance = 0;
     int max_distance = 0;
+    int modregrm, modxxxrm;
     if (format[0] == '\0') {
         if (segment_override >= 0) {
             b = segment_override;
@@ -92,7 +94,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 buffer += p;
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
-                int modxxxrm = mb_memory_peek(mb, segment, offset + operand);
+                modxxxrm = mb_memory_peek(mb, segment, offset + operand);
                 int p = 0;
                 switch(modxxxrm >> 6) {
                 case 3:
@@ -101,6 +103,18 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 }
                 buffer += p;
                 format += 2;
+            } else if (!strncmp(format, "M8", 2)) {
+                printf("WOWOWOWOWKWKWKEKEKEKEKEK\n");
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                printf("modregrm: %d\n", modregrm);
+                buffer += sprintf(buffer, "%s, ", register_name_8[(modregrm >> 3) & 7]);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", register_name_8[modregrm & 7]);
+                    break;
+                }
+                format += 2;
+                    
             } else {
                 format++; // Just get us out of here!
             }

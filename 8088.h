@@ -9,15 +9,15 @@ enum control_bus_state { BUS_INTA, BUS_IOREAD, BUS_IOWRITE, BUS_HALT, BUS_FETCH,
 enum state { CPU_IDLE, CPU_FETCH, CPU_DECODE, CPU_MEMREAD, CPU_MEMWRITE };
 enum bus_state { BUS_IDLE, BUS_T1, BUS_T2, BUS_T3, BUS_T4, BUS_TW };
 enum return_reason { NO_REASON, WAIT_BIU, WAIT_INTERRUPTIBLE };
-enum flags { FLAG_OF=2048,
-             FLAG_DF=1024,
-             FLAG_IF=512,
-             FLAG_TF=256,
-             FLAG_SF=128,
-             FLAG_ZF=64,
-             FLAG_AF=16,
-             FLAG_PF=4,
-             FLAG_CF=1 };
+enum flags { FLAG_OF=0x800,
+             FLAG_DF=0x400,
+             FLAG_IF=0x200,
+             FLAG_TF=0x100,
+             FLAG_SF=0x80,
+             FLAG_ZF=0x40,
+             FLAG_AF=0x10,
+             FLAG_PF=0x4,
+             FLAG_CF=0x1 };
 
 struct iapx88 {
     // Registers
@@ -70,5 +70,6 @@ int biu_handle_response(struct iapx88 *cpu);
 
 #define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
 #define EA(seg, offs) (((seg) << 4) + (offs))
+#define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
 
 #endif
