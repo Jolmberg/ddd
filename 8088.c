@@ -17,8 +17,8 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 2, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
@@ -36,6 +36,7 @@ struct iapx88 *iapx88_create(void)
 void iapx88_reset(struct iapx88 *cpu)
 {
     cpu->flags = 0xF000;
+    cpu->flag_pf_source = 0;
     cpu->ip = 0;
     cpu->cs = 0xFFFF;
     cpu->ds = 0;
@@ -133,7 +134,7 @@ void set_flag(struct iapx88 *cpu, uint16_t flag, int state)
     }
 }
 
-void update_flag_pf(struct iapx88 *cpu)
+void iapx88_update_flag_pf(struct iapx88 *cpu)
 {
     set_flag(cpu, FLAG_PF, __builtin_parity(cpu->flag_pf_source)); // GCC magic
 }
@@ -193,35 +194,86 @@ int iapx88_step(struct iapx88 *cpu)
                 }
                 cleanup(cpu, 0);
                 
-            case 0x71: /* branches */
-                return branch(cpu, !(cpu->flags & FLAG_OF));
+            case 0x70: /* branches */
+                return branch(cpu, cpu->flags & FLAG_OF); // JO
+            case 0x71:
+                return branch(cpu, !(cpu->flags & FLAG_OF)); // JNO
+            case 0x72:
+                return branch(cpu, cpu->flags & FLAG_CF); // JB
             case 0x73:
-                printf("JAE!\n");
-                return branch(cpu, !(cpu->flags & FLAG_CF));
+                return branch(cpu, !(cpu->flags & FLAG_CF)); // JAE
+            case 0x74:
+                return branch(cpu, cpu->flags & FLAG_ZF); // JE
             case 0x75:
-                return branch(cpu, !(cpu->flags & FLAG_ZF));
+                return branch(cpu, !(cpu->flags & FLAG_ZF)); // JNE
+            case 0x78:
+                return branch(cpu, cpu->flags & FLAG_SF); // JS
             case 0x79:
-                return branch(cpu, !(cpu->flags & FLAG_SF));
+                return branch(cpu, !(cpu->flags & FLAG_SF)); // JNS
+            case 0x7a:
+                iapx88_update_flag_pf(cpu);
+                return branch(cpu, cpu->flags & FLAG_PF); // JP
             case 0x7b:
-                return branch(cpu, !(cpu->flags & FLAG_PF));
-            case 0xB0:
+                iapx88_update_flag_pf(cpu);
+                return branch(cpu, !(cpu->flags & FLAG_PF)); // JNP
+            case 0x8b: /* MOV modregr/m to reg16 */
+                cpu->reg1 = (cpu->cur_inst[1] >> 3) & 7;
+                switch(cpu->cur_inst[1] & 0xC0) {
+                case 0xC0:
+                    cpu->reg2 = cpu->cur_inst[1] & 7;
+                    cpu->reg16[cpu->reg1] = cpu->reg16[cpu->reg2];
+                    cleanup(cpu, 0);
+                    return 2;
+                }
+            case 0x8c: /* MOV modregr/m from segreg */
+                cpu->reg1 = (cpu->cur_inst[1] >> 3) & 3;
+                switch (cpu->cur_inst[1] & 0xC0) {
+                case 0xC0:
+                    cpu->reg2 = (cpu->cur_inst[1] & 7);
+                    cpu->reg16[cpu->reg2] = cpu->segreg[cpu->reg1];
+                    cleanup(cpu, 0);
+                    return 2;
+                }
+            case 0x8e: /* MOV modregr/m to segreg */
+                cpu->reg1 = (cpu->cur_inst[1] >> 3) & 3;
+                switch (cpu->cur_inst[1] & 0xC0) {
+                case 0xC0:
+                    cpu->reg2 = (cpu->cur_inst[1] & 7);
+                    cpu->segreg[cpu->reg1] = cpu->reg16[cpu->reg2];
+                    cleanup(cpu, 0);
+                    return 2;
+                }
+            case 0xB0: /* MOV reg8, immediate */
             case 0xB1:
             case 0xB2:
             case 0xB3:
             case 0xB4:
             case 0xB5:
             case 0xB6:
-            case 0xB7: /* MOV reg8, immediate */
-		cpu->reg = REG8INDEX(cpu->cur_inst[0] & 7);
-                cpu->reg8[cpu->reg] = cpu->cur_inst[1];
+            case 0xB7:
+		cpu->reg1 = REG8INDEX(cpu->cur_inst[0] & 7);
+                cpu->reg8[cpu->reg1] = cpu->cur_inst[1];
+                cleanup(cpu, 0);
+                return 4;
+            case 0xB8: /* MOV reg16, immediate */
+            case 0xB9:
+            case 0xBA:
+            case 0xBB:
+            case 0xBC:
+            case 0xBD:
+            case 0xBE:
+            case 0xBF:
+                cpu->reg1 = cpu->cur_inst[0] & 7;
+                cpu->reg16[cpu->reg1] = word_from_bytes(cpu->cur_inst + 1);
                 cleanup(cpu, 0);
                 return 4;
             case 0x9E: /* SAHF */
                 cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+                cpu->flag_pf_source = cpu->flags & FLAG_PF;
                 cleanup(cpu, 0);
                 return 4;
             case 0x9F: /* LAHF */
-                update_flag_pf(cpu);
+                iapx88_update_flag_pf(cpu);
                 cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
                 cleanup(cpu, 0);
                 return 4;
@@ -238,7 +290,7 @@ int iapx88_step(struct iapx88 *cpu)
 		    break;
 		}
 		break;
-	    case 0xD2: /* SHR r/m, cl */
+	    case 0xD2: /* SHR modregr/m, cl */
 		switch(cpu->cur_inst[1] & 0xC0) {
 		case 0xC0:
 		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);
@@ -260,10 +312,17 @@ int iapx88_step(struct iapx88 *cpu)
 		cpu->ip = word1;
 		cleanup(cpu, 1);
 		return 15;
+            case 0xF8: /* CLC */
+                set_flag(cpu, FLAG_CF, 0);
+                cleanup(cpu, 0);
+                return 2;
+            case 0xF9: /* STC */
+                set_flag(cpu, FLAG_CF, 1);
+                cleanup(cpu, 0);
+                return 2;
 	    case 0xFA: /* CLI */
-		cpu->flags &= 0xFDFF;
+                set_flag(cpu, FLAG_IF, 0);
 		cleanup(cpu, 0);
-		cpu->return_reason = WAIT_INTERRUPTIBLE;
 		return 2;
 	    default:
 		printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);

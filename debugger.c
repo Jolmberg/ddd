@@ -54,6 +54,7 @@ struct debugger *debugger_create(struct motherboard *mb)
 
 void debugger_step(struct debugger *d)
 {
+    iapx88_update_flag_pf(d->cpu);
     debugger_copy_cpu_regs(d);
     disassemble_from_address(d->disassembly, d->disassembly_addresses, d->lengths, d->bytes, d->mb, d->cpu->cs, d->cpu->ip, 100);
     /* for (int i = 0; i < 10; i++) { */

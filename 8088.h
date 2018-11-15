@@ -57,12 +57,13 @@ struct iapx88 {
     int cur_inst_read;
     int cur_inst_len;
     uint16_t prefetch_ip;
-    int reg;
+    int reg1, reg2;
 };
 
 struct iapx88 *iapx88_create();
 void iapx88_reset(struct iapx88 *cpu);
 int iapx88_step(struct iapx88 *cpu);
+void iapx88_update_flag_pf(struct iapx88 *cpu);
 
 int biu_request_prefetch(struct iapx88 *cpu, int max_cycles);
 int biu_handle_prefetch(struct iapx88 *cpu);

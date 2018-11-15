@@ -12,25 +12,28 @@
           n8 - modxxxr/m byte 8 bit registers
           n16 - modxxxr/m byte 16 bit registers
           m8 - modregr/m byte 8 bit registers
-          M8 - modregr/m byte 16 bit registers reverse order */
+          m16 - modregr/m byte 16 bit registers
+          M8 - modregr/m byte 8 bit registers reverse order
+          ms - modregr/m byte segregs
+          Ms - modregr/m byte segregs reverse order */
 char instr_format[256][20] =
 {
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "xor $1M8", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "xor $1m8", "xor $1m16", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "jno $1b", "jb $1b", "jae $1b", "je $1b", "jne $1b", "", "", "js $1b", "jns $1b", "jp $1b", "jnp $1b", "", "", "", "",
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "jo $1b", "jno $1b", "jb $1b", "jae $1b", "je $1b", "jne $1b", "", "", "js $1b", "jns $1b", "jp $1b", "jnp $1b", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "mov $1m16", "mov $1Ms", "", "mov $1ms", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "sahf", "lahf",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "mov al, $1i8", "mov cl, $1i8", "mov dl, $1i8", "mov bl, $1i8", "mov ah, $1i8", "mov ch, $1i8", "mov dh, $1i8", "mov bh, $1i8", "mov ax, $1i16", "mov cx, $1i16", "mov dx, $1i16", "mov bx, $1i16", "mov sp, $1i16", "mov bp, $1i16", "mov si, $1i16", "mov di, $1i16",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "$1o0 $1n8, 1", "", "$1o0 $1n8, cl", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "jmp $3i16:$1i16", "", "", "", "", "",
-    "", "", "", "", "", "", "", "", "", "", "cli", "", "", "", "", ""
+    "", "", "", "", "", "", "", "", "clc", "stc", "cli", "", "", "", "", ""
 };
 
 const char extended[1][8][5] =
@@ -38,7 +41,9 @@ const char extended[1][8][5] =
     { "rol", "ror", "rcl", "rcr", "shl", "shr", "", "sar" }
 };
 
-const char register_name_8[8][3] = { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
+const char reg16_name[8][3] = { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" };
+const char reg8_name[8][3] = { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
+const char segreg_name[4][3] = { "es", "cs", "ss", "ds" };
 
 int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t segment, uint16_t offset) {
     int segment_override = -1;
@@ -93,20 +98,46 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 modxxxrm = mb_memory_peek(mb, segment, offset + operand);
                 switch(modxxxrm & 0xC0) {
                 case 0xC0:
-                    buffer += sprintf(buffer, "%s", register_name_8[modxxxrm & 7]);
+                    buffer += sprintf(buffer, "%s", reg8_name[modxxxrm & 7]);
                     break;
                 }
                 format += 2;
-            } else if (!strncmp(format, "M8", 2)) {
+            } else if (!strncmp(format, "m8", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprintf(buffer, "%s, ", register_name_8[(modregrm >> 3) & 7]);
+                buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]);
                 switch (modregrm & 0xC0) {
                 case 0xC0:
-                    buffer += sprintf(buffer, "%s", register_name_8[modregrm & 7]);
+                    buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]);
                     break;
                 }
                 format += 2;
-                    
+            } else if (!strncmp(format, "m16", 2)) {
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
+                    break;
+                }
+                format += 3;
+            } else if (!strncmp(format, "ms", 2)) {
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                buffer += sprintf(buffer, "%s, ", segreg_name[(modregrm >> 3) & 3]);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
+                    break;
+                }
+                format += 2;
+            } else if (!strncmp(format, "Ms", 2)) {
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                buffer += sprintf(buffer, "%s, ", reg16_name[modregrm & 7]);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", segreg_name[(modregrm >> 3) & 3]);
+                    break;
+                }
+                format += 2;
             } else {
                 format++; // Just get us out of here!
             }
