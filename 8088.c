@@ -13,7 +13,7 @@ const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -133,10 +133,26 @@ void set_flag(struct iapx88 *cpu, uint16_t flag, int state)
     }
 }
 
+void update_flag_pf(struct iapx88 *cpu)
+{
+    set_flag(cpu, FLAG_PF, __builtin_parity(cpu->flag_pf_source)); // GCC magic
+}
+
+void set_flags_from_bitwise8(struct iapx88 *cpu, uint8_t result)
+{
+    set_flag(cpu, FLAG_CF, 0);
+    cpu->flag_pf_source = result;
+    set_flag(cpu, FLAG_ZF, !result);
+    set_flag(cpu, FLAG_SF, result & 0x80);
+    set_flag(cpu, FLAG_OF, 0);
+}
+
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
-    uint8_t reg1, temp8;
+    int reg1, reg2;
+    uint8_t temp8, modregrm;
+
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
@@ -164,20 +180,18 @@ int iapx88_step(struct iapx88 *cpu)
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
-            /* case 0x32: /\* xor modregrm (to reg)*\/ */
-            /*     modregrm = cpu->cur_inst[1]; */
-            /*     reg1 = cpu->reg8[REG8INDEX((modregrm >> 3) & 7)]; */
-            /*     switch (modregrm & 0xC0) { */
-            /*     case 0xC0: */
-            /*         reg2 = cpu->reg8[REG8INDEX(modregrm & 7)]; */
-            /*         temp = reg1 ^ reg2; */
-            /*         reg1 = temp; */
-
-            /*     } */
-            /*     set_flag(cpu, FLAG_CF, 0); */
-            /*     set_flag(cpu, FLAG_PF,  */
-            /*     set_flag(cpu, FLAG_SF, temp & 0x80); */
-            /*     set_flag(cpu, FLAG_OF, 0); */
+            case 0x32: /* xor modregrm (to reg)*/
+                modregrm = cpu->cur_inst[1];
+                reg1 = REG8INDEX((modregrm >> 3) & 7);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    reg2 = REG8INDEX(modregrm & 7);
+                    cpu->reg8[reg1] ^= cpu->reg8[reg2];
+                    set_flags_from_bitwise8(cpu, cpu->reg8[reg1]);
+                    cleanup(cpu, 0);
+                    return 3;
+                }
+                cleanup(cpu, 0);
                 
             case 0x71: /* branches */
                 return branch(cpu, !(cpu->flags & FLAG_OF));
@@ -207,10 +221,11 @@ int iapx88_step(struct iapx88 *cpu)
                 cleanup(cpu, 0);
                 return 4;
             case 0x9F: /* LAHF */
+                update_flag_pf(cpu);
                 cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
                 cleanup(cpu, 0);
                 return 4;
-	    case 0xD0: /* SHL r/m, 1 */
+	    case 0xD0: /* SHL modxxxrm, 1 */
 		switch(cpu->cur_inst[1] & 0xC0) {
 		case 0xC0:
 		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);

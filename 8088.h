@@ -32,6 +32,7 @@ struct iapx88 {
 	struct { uint16_t es, cs, ss, ds; };
     };
     uint16_t ip, flags;
+    uint16_t flag_pf_source; // Calculate parity flag from this when needed
 
     // Pins
     uint32_t address_pins;
