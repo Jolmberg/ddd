@@ -160,10 +160,16 @@ void update_tex_disassembly(SDL_Texture *texture, struct debugger *debugger)
                   current ? &(struct colour){ 255, 255, 255, 100 } : &(struct colour){ 255, 170, 170, 170 },
                   &(struct colour){ 255, 50, 50, 50 },
                   " 0x%05x: ", debugger->disassembly_addresses[i]);
-	sdlprintf(renderer, 11*9, 16*i,
-		  current ? &(struct colour){ 255, 255, 255, 100 } : &(struct colour){ 255, 200, 200, 200 },
-		  NULL,
-		  debugger->disassembly[i]);
+	int x = sdlprintf(renderer, 11*9, 16*i,
+			  current ? &(struct colour){ 255, 255, 255, 100 } : &(struct colour){ 255, 200, 200, 200 },
+			  NULL,
+			  debugger->disassembly[i]);
+	for (int j = 0; j < debugger->lengths[i]; j++) {
+	    sdlprintf(renderer, 11*9 + x * 9 + 9 + j*27, 16*i ,
+		      &(struct colour){ 255, 100, 100, 100 },
+		      NULL,
+		      "%02x", debugger->bytes[i][j]);
+	}
     }
 }
 
