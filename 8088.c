@@ -13,7 +13,7 @@ const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -118,7 +118,7 @@ int branch(struct iapx88 *cpu, int taken)
 {
     int cycles = 4;
     if (taken) {
-        cpu->ip = cpu->ip + cpu->cur_inst[1] + 2;
+        cpu->ip = cpu->ip + 2 + (int8_t)cpu->cur_inst[1];
         cycles += 12;
     }
     cleanup(cpu, taken);
@@ -145,6 +145,15 @@ void set_flags_from_bitwise8(struct iapx88 *cpu, uint8_t result)
     cpu->flag_pf_source = result;
     set_flag(cpu, FLAG_ZF, !result);
     set_flag(cpu, FLAG_SF, result & 0x80);
+    set_flag(cpu, FLAG_OF, 0);
+}
+
+void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
+{
+    set_flag(cpu, FLAG_CF, 0);
+    cpu->flag_pf_source = result;
+    set_flag(cpu, FLAG_ZF, !result);
+    set_flag(cpu, FLAG_SF, result & 0x8000);
     set_flag(cpu, FLAG_OF, 0);
 }
 
@@ -181,7 +190,7 @@ int iapx88_step(struct iapx88 *cpu)
 		return -1;
 	    }
 	    switch (cpu->cur_inst[0]) {
-            case 0x32: /* xor modregrm (to reg)*/
+            case 0x32: /* xor modregrm (to reg8)*/
                 modregrm = cpu->cur_inst[1];
                 reg1 = REG8INDEX((modregrm >> 3) & 7);
                 switch (modregrm & 0xC0) {
@@ -192,7 +201,17 @@ int iapx88_step(struct iapx88 *cpu)
                     cleanup(cpu, 0);
                     return 3;
                 }
-                cleanup(cpu, 0);
+	    case 0x33: /* xor modregrm (to reg16) */
+                modregrm = cpu->cur_inst[1];
+                reg1 = (modregrm >> 3) & 7;
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    reg2 = modregrm & 7;
+                    cpu->reg16[reg1] ^= cpu->reg16[reg2];
+                    set_flags_from_bitwise16(cpu, cpu->reg16[reg1]);
+                    cleanup(cpu, 0);
+                    return 3;
+                }
                 
             case 0x70: /* branches */
                 return branch(cpu, cpu->flags & FLAG_OF); // JO
@@ -277,34 +296,43 @@ int iapx88_step(struct iapx88 *cpu)
                 cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
                 cleanup(cpu, 0);
                 return 4;
-	    case 0xD0: /* SHL modxxxrm, 1 */
-		switch(cpu->cur_inst[1] & 0xC0) {
-		case 0xC0:
-		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);
-                    temp8 = cpu->reg8[reg1] << 1;
-                    set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80));
-                    set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80));
-                    cpu->reg8[reg1] = temp8;
-		    cleanup(cpu, 0);
-                    return 2;
-		    break;
-		}
-		break;
-	    case 0xD2: /* SHR modregr/m, cl */
-		switch(cpu->cur_inst[1] & 0xC0) {
-		case 0xC0:
-		    reg1 = REG8INDEX(cpu->cur_inst[1] & 7);
-		    if (cpu->cl > 0) {
-			cpu->reg8[reg1] >>= (cpu->cl - 1);
-                        set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1);
-			cpu->reg8[reg1] >>=1;
+	    case 0xD0: /* shift/rotate by 1 */
+		modregrm = cpu->cur_inst[1];
+		switch(modregrm & 0x38) {
+		case 0x20: /* SHL modxxxrm, 1 */
+		    switch(modregrm & 0xC0) {
+		    case 0xC0:
+			reg1 = REG8INDEX(modregrm & 7);
+			temp8 = cpu->reg8[reg1] << 1;
+			set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80));
+			set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80));
+			cpu->reg8[reg1] = temp8;
+			cleanup(cpu, 0);
+			return 2;
+			break;
 		    }
-		    cleanup(cpu, 0);
-                    return 8 + 4 * cpu->cl;
 		    break;
 		}
 		break;
-		    
+	    case 0xD2: /* shift/rotate by cl */
+		modregrm = cpu->cur_inst[1];
+		switch(cpu->cur_inst[1] & 0x38) {
+		case 0x28: /* SHR modxxxrm, cl */
+		    switch(modregrm & 0xC0) {
+		    case 0xC0:
+			reg1 = REG8INDEX(modregrm & 7);
+			if (cpu->cl > 0) {
+			    cpu->reg8[reg1] >>= (cpu->cl - 1);
+			    set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1);
+			    cpu->reg8[reg1] >>=1;
+			}
+			cleanup(cpu, 0);
+			return 8 + 4 * cpu->cl;
+			break;
+		    }
+		    break;
+		}
+		break;
 	    case 0xEA: /* JMP direct intersegment */
 		word1 = word_from_bytes(cpu->cur_inst + 1);
 		word2 = word_from_bytes(cpu->cur_inst + 3);
@@ -324,6 +352,12 @@ int iapx88_step(struct iapx88 *cpu)
                 set_flag(cpu, FLAG_IF, 0);
 		cleanup(cpu, 0);
 		return 2;
+	    /* case 0xFF: /\* PUSH, CALL, JMP, INC, DEC modxxxr/m *\/ */
+	    /* 	modregrm = cpu->cur_inst[1]; */
+	    /* 	switch (modregrm & 0x38) { */
+	    /* 	case 0x30: */
+	    /* 	    cpu->reg1 = modregrm & 7; */
+	    /* 	} */
 	    default:
 		printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);
 		return -1;

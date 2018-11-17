@@ -33,12 +33,13 @@ char instr_format[256][20] =
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "$1o0 $1n8, 1", "", "$1o0 $1n8, cl", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "jmp $3i16:$1i16", "", "", "", "", "",
-    "", "", "", "", "", "", "", "", "clc", "stc", "cli", "", "", "", "", ""
+    "", "", "", "", "", "", "", "", "clc", "stc", "cli", "", "", "", "", "$1o1 $1n16"
 };
 
-const char extended[1][8][5] =
+const char extended[2][8][5] =
 { // shifts/rotate
-    { "rol", "ror", "rcl", "rcr", "shl", "shr", "", "sar" }
+    { "rol", "ror", "rcl", "rcr", "shl", "shr", "", "sar" },
+    { "inc", "dec", "call", "call", "jmp", "jmp", "push", "" }
 };
 
 const char reg16_name[8][3] = { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" };
@@ -85,7 +86,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 buffer += sprintf(buffer, "0x%x", word);
                 format += 3;
             } else if (!strncmp(format, "b", 1)) {
-                uint16_t word = offset + mb_memory_peek(mb, segment, offset + operand) + 2;
+                uint16_t word = offset + 2 + (int8_t)mb_memory_peek(mb, segment, offset + operand);
                 buffer += sprintf(buffer, "0x%x", EA(segment, word));
                 format += 1;
             } else if (!strncmp(format, "o", 1)) {
@@ -102,6 +103,14 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                     break;
                 }
                 format += 2;
+            } else if (!strncmp(format, "n16", 3)) {
+                modxxxrm = mb_memory_peek(mb, segment, offset + operand);
+                switch(modxxxrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s", reg16_name[modxxxrm & 7]);
+                    break;
+                }
+                format += 3;
             } else if (!strncmp(format, "m8", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
                 buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]);
