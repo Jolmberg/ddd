@@ -27,6 +27,10 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
+const uint8_t instruction_type[256] =
+{
+};
+
 struct iapx88 *iapx88_create(void)
 {
     struct iapx88 *cpu = (struct iapx88 *)malloc(sizeof(struct iapx88));
