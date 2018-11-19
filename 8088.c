@@ -29,6 +29,7 @@ const uint8_t instruction_length[256] =
 
 const uint8_t instruction_type[256] =
 {
+    _
 };
 
 struct iapx88 *iapx88_create(void)

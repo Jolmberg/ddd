@@ -19,7 +19,21 @@ enum flags { FLAG_OF=0x800,
              FLAG_PF=0x4,
              FLAG_CF=0x1 };
 
-enum instruction_type { SIMPLE, MODREGRM8, MODREGRM16, MODSEGRM };
+enum instruction_type { _,
+                        SIMPLE,
+                        REGISTER8_IMMEDIATE,
+                        REGISTER16_IMMEDIATE,
+                        IMMEDIATE8,
+                        IMMEDIATE16,
+                        MODREGRM8,
+                        MODREGRM16,
+                        MODSEGRM,
+                        MODXXXRM8,
+                        MODXXXRM16,
+                        MODXXXRM8_IMMEDIATE,
+                        MODXXXRM16_IMMEDIATE,
+                        SILLY,
+                        OFFSET_SEGMENT};
 
 struct iapx88 {
     // Registers
