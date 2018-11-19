@@ -27,10 +27,50 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
-const uint8_t instruction_type[256] =
-{
-    _
-};
+/* const enum instruction_type instruction_type[256] = */
+/* { */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
+/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ */
+/* }; */
+
+
+int (*plan_modregrm8[3])(struct iapx88 *cpu) = { read_modregrm8, do_instruction, write_modregrm8 };
+
+int (**instruction_plan[256])(struct iapx88 *cpu) =
+{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+
+int fetch(struct iapx88 *cpu);
+int decode(struct iapx88 *cpu);
+
 
 struct iapx88 *iapx88_create(void)
 {
@@ -58,6 +98,7 @@ void iapx88_reset(struct iapx88 *cpu)
     cpu->prefetch_ip = 0;
     cpu->prefetch_forbidden = 0;
     cpu->return_reason = WAIT_INTERRUPTIBLE;
+    cpu->next_step = fetch;
 }
 
 void check_segment_override(struct iapx88 *cpu, uint8_t b)
@@ -162,6 +203,59 @@ void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
     set_flag(cpu, FLAG_OF, 0);
 }
 
+int fetch(struct iapx88 *cpu)
+{
+    while (want_more_instruction_bytes(cpu)) {
+        if (cpu->prefetch_usage > 0) {
+            printf("Yay, prefetched!\n");
+            take_instruction_byte_from_prefetch(cpu);
+        } else {
+            if (cpu->return_reason == WAIT_BIU && cpu->eu_wanted_control_bus_state == BUS_FETCH) {
+                cpu->return_reason = NO_REASON;
+                take_instruction_byte_from_biu(cpu);
+            } else {
+                cpu->return_reason = WAIT_BIU;
+                cpu->eu_wanted_control_bus_state = BUS_FETCH;
+                cpu->eu_wanted_segment = cpu->cs;
+                cpu->eu_wanted_offset = cpu->prefetch_ip++;
+                return 0;
+            }
+        }
+    }
+    cpu->state = CPU_DECODE;
+    printf("broskyyyy\n");
+    return decode(cpu);
+//    cpu->next_step = decode;
+    //return 0;
+}
+
+int read_modregrm8(struct iapx88 *cpu)
+{
+    return 0;
+}
+
+int write_modregrm8(struct iapx88 *cpu)
+{
+    return 0;
+}
+
+int do_instruction(struct iapx88 *cpu)
+{
+    return 0;
+}
+
+int decode(struct iapx88 *cpu)
+{
+    printf("decode!!!!\n");
+    /* switch (instruction_type[cpu->cur_inst[0]]) { */
+    /* case MODREGRM8: */
+    /*     cpu->plan[0] = read_modregrm_8; */
+    /*     cpu->plan[1] = instruction_function[cpu->cur_inst[0]]; */
+    /*     cpu->plan[2] = write_modregrm_8; */
+    /* } */
+    return -1;
+}
+
 int iapx88_step(struct iapx88 *cpu)
 {
     uint16_t word1, word2;
@@ -171,25 +265,6 @@ int iapx88_step(struct iapx88 *cpu)
     while (1) {
         switch (cpu->state) {
         case CPU_FETCH:
-	    while (want_more_instruction_bytes(cpu)) {
-		if (cpu->prefetch_usage > 0) {
-                    printf("Yay, prefetched!\n");
-		    take_instruction_byte_from_prefetch(cpu);
-		} else {
-		    if (cpu->return_reason == WAIT_BIU && cpu->eu_wanted_control_bus_state == BUS_FETCH) {
-                        cpu->return_reason = NO_REASON;
-			take_instruction_byte_from_biu(cpu);
-		    } else {
-			cpu->return_reason = WAIT_BIU;
-			cpu->eu_wanted_control_bus_state = BUS_FETCH;
-			cpu->eu_wanted_segment = cpu->cs;
-			cpu->eu_wanted_offset = cpu->prefetch_ip++;
-			return 0;
-		    }
-		}
-            }
-	    cpu->state = CPU_DECODE;
-	    break;
 	case CPU_DECODE:
 	    if (cpu->cur_inst_len == 0) {
 		return -1;

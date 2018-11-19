@@ -19,21 +19,28 @@ enum flags { FLAG_OF=0x800,
              FLAG_PF=0x4,
              FLAG_CF=0x1 };
 
-enum instruction_type { _,
-                        SIMPLE,
-                        REGISTER8_IMMEDIATE,
-                        REGISTER16_IMMEDIATE,
-                        IMMEDIATE8,
-                        IMMEDIATE16,
-                        MODREGRM8,
-                        MODREGRM16,
-                        MODSEGRM,
-                        MODXXXRM8,
-                        MODXXXRM16,
-                        MODXXXRM8_IMMEDIATE,
-                        MODXXXRM16_IMMEDIATE,
-                        SILLY,
-                        OFFSET_SEGMENT};
+/* enum instruction_type { _, */
+/*                         SIMPLE, */
+/*                         REGISTER8_IMMEDIATE, */
+/*                         REGISTER16_IMMEDIATE, */
+/*                         IMMEDIATE8, */
+/*                         IMMEDIATE16, */
+/*                         MODREGRM8_TOREG, */
+/*                         MODREGRM8_FROMREG, */
+/*                         MODREGRM16, */
+/*                         MODSEGRM, */
+/*                         MODXXXRM8, */
+/*                         MODXXXRM16, */
+/*                         MODXXXRM8_IMMEDIATE, */
+/*                         MODXXXRM16_IMMEDIATE, */
+/*                         SILLY, */
+/*                         OFFSET_SEGMENT}; */
+
+
+/* const int (*p)(struct iapx88 *cpu)[32] = { { NULL }, */
+/*                                               { do_instruction */
+/*                                               {  */
+
 
 struct iapx88 {
     // Registers
@@ -64,6 +71,7 @@ struct iapx88 {
     uint16_t eu_wanted_segment, eu_wanted_offset;
     uint8_t eu_biu_byte;
     
+    int (*next_step)(struct iapx88 *cpu);
     int state;
     int segment_override;
     uint8_t cur_inst[5];
@@ -72,6 +80,10 @@ struct iapx88 {
     uint16_t prefetch_ip;
     int reg1, reg2;
 };
+
+int read_modregrm8(struct iapx88 *cpu);
+int do_instruction(struct iapx88 *cpu);
+int write_modregrm8(struct iapx88 *cpu);
 
 struct iapx88 *iapx88_create();
 void iapx88_reset(struct iapx88 *cpu);
