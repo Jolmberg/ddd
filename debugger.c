@@ -48,7 +48,7 @@ struct debugger *debugger_create(struct motherboard *mb)
 	bytes +=7;
     }
 
-    d->step = mb->step;
+    d->step = mb->step - 1;
     return d;
 }
 

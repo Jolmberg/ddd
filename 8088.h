@@ -96,7 +96,7 @@ int biu_make_request(struct iapx88 *cpu);
 int biu_handle_response(struct iapx88 *cpu);
 
 #define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
-#define EA(seg, offs) (((seg) << 4) + (offs))
+#define EA(seg, offs) ((((seg) << 4) + (offs)) & 0xFFFFF)
 #define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
 
 #endif

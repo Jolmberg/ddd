@@ -167,6 +167,11 @@ int disassemble_from_address(char **buffer, uint32_t *addresses, int *lengths, u
     uint16_t new_segment;
     for (int line = 0; line < max_lines; line++) {
         address = EA(segment, offset);
+
+        if (address == 0) {
+            return line;
+	}
+
         addresses[line] = address;
 	int length = sprint_instruction_at_address(buffer[line], mb, segment, offset);
 	lengths[line] = length;
@@ -175,7 +180,6 @@ int disassemble_from_address(char **buffer, uint32_t *addresses, int *lengths, u
 	}
 
         new_offset = offset + length;
-
         if (new_offset < offset) {
             new_segment = segment + 0x1000;
             if (new_segment < segment) {
@@ -184,10 +188,6 @@ int disassemble_from_address(char **buffer, uint32_t *addresses, int *lengths, u
             segment = new_segment;
         }
         offset = new_offset;
-
-        if (address == 0) {
-            return line + 1;
-	}
     }
     return line;
 }
