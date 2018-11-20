@@ -48,7 +48,8 @@ const uint8_t instruction_length[256] =
 /* }; */
 
 
-int (*plan_modregrm8[3])(struct iapx88 *cpu) = { read_modregrm8, do_instruction, write_modregrm8 };
+int (*plan_modregrm8[3])(struct iapx88 *cpu) = { read_modregrm8, do_operation, write_modregrm8 };
+
 
 int (**instruction_plan[256])(struct iapx88 *cpu) =
 { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -59,6 +60,24 @@ int (**instruction_plan[256])(struct iapx88 *cpu) =
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+
+int (*operation[256])(struct iapx88 *cpu) =
+{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  jo, jno, jb, jae, je, jne, NULL, NULL, js, jns, jp, jnp, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -160,6 +179,13 @@ void cleanup(struct iapx88 *cpu, int jumped)
     cpu->return_reason = WAIT_INTERRUPTIBLE;
 }
 
+int jo(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_OF); }
+int jno(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_OF)); }
+int jb(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
+int jae(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
+
+
+
 int branch(struct iapx88 *cpu, int taken)
 {
     int cycles = 4;
@@ -239,14 +265,21 @@ int write_modregrm8(struct iapx88 *cpu)
     return 0;
 }
 
-int do_instruction(struct iapx88 *cpu)
+int do_operation(struct iapx88 *cpu)
 {
-    return 0;
+    return (*operation[cpu->cur_inst[0]])(cpu);
 }
 
 int decode(struct iapx88 *cpu)
 {
     printf("decode!!!!\n");
+    if (!instruction_plan[cpu->cur_inst[0]]) {
+        return do_operation(cpu);
+    } else {
+        cpu->plan_step = instruction_plan[cpu->cur_inst[0]][0];
+    }
+    return execute(cpu);
+    //cpu->plan_step = 
     /* switch (instruction_type[cpu->cur_inst[0]]) { */
     /* case MODREGRM8: */
     /*     cpu->plan[0] = read_modregrm_8; */

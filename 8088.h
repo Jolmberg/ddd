@@ -71,6 +71,7 @@ struct iapx88 {
     uint16_t eu_wanted_segment, eu_wanted_offset;
     uint8_t eu_biu_byte;
     
+    int (*plan_step)(struct iapx88 *cpu);
     int (*next_step)(struct iapx88 *cpu);
     int state;
     int segment_override;
