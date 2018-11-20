@@ -71,7 +71,7 @@ struct iapx88 {
     uint16_t eu_wanted_segment, eu_wanted_offset;
     uint8_t eu_biu_byte;
     
-    int (*plan_step)(struct iapx88 *cpu);
+    int (**plan_step)(struct iapx88 *cpu);
     int (*next_step)(struct iapx88 *cpu);
     int state;
     int segment_override;
@@ -80,11 +80,8 @@ struct iapx88 {
     int cur_inst_len;
     uint16_t prefetch_ip;
     int reg1, reg2;
+    int jumped;
 };
-
-int read_modregrm8(struct iapx88 *cpu);
-int do_instruction(struct iapx88 *cpu);
-int write_modregrm8(struct iapx88 *cpu);
 
 struct iapx88 *iapx88_create();
 void iapx88_reset(struct iapx88 *cpu);
@@ -99,5 +96,22 @@ int biu_handle_response(struct iapx88 *cpu);
 #define IS_SEGMENT_OVERRIDE(x) (((x) & 0xE7) == 0x66)
 #define EA(seg, offs) ((((seg) << 4) + (offs)) & 0xFFFFF)
 #define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
+
+int read_modregrm8(struct iapx88 *cpu);
+int do_operation(struct iapx88 *cpu);
+int write_modregrm8(struct iapx88 *cpu);
+
+int jo(struct iapx88 *cpu);
+int jno(struct iapx88 *cpu);
+int jb(struct iapx88 *cpu);
+int jae(struct iapx88 *cpu);
+int je(struct iapx88 *cpu);
+int jne(struct iapx88 *cpu);
+int js(struct iapx88 *cpu);
+int jns(struct iapx88 *cpu);
+int jp(struct iapx88 *cpu);
+int jnp(struct iapx88 *cpu);
+
+int jmp_direct_is(struct iapx88 *cpu);
 
 #endif

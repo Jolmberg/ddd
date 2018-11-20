@@ -44,12 +44,12 @@ void *mb_run(void *mbarg)
     struct motherboard *mb = mbarg;
     int cycles = 0;
     struct iapx88 *cpu = mb->cpu;
+    if (mb->debug) {
+        pthread_mutex_lock(&mb->mutex);
+        pthread_cond_wait(&mb->condition, &mb->mutex);
+        pthread_mutex_unlock(&mb->mutex);
+    }
     while (1) {
-        if (mb->debug) {
-		pthread_mutex_lock(&mb->mutex);
-		pthread_cond_wait(&mb->condition, &mb->mutex);
-		pthread_mutex_unlock(&mb->mutex);
-        }
 
 	int eu_cycles = (*cpu->next_step)(mb->cpu); //iapx88_step(mb->cpu);
 	int biu_cycles = 0;
@@ -83,11 +83,11 @@ void *mb_run(void *mbarg)
 	case WAIT_INTERRUPTIBLE:
 	    printf("CPU is waiting for a possible interrupt\n");
 	    mb->step++;
-	    /* if (mb->debug) { */
-	    /*     pthread_mutex_lock(&mb->mutex); */
-	    /*     pthread_cond_wait(&mb->condition, &mb->mutex); */
-	    /*     pthread_mutex_unlock(&mb->mutex); */
-	    /* } */
+	    if (mb->debug) {
+	        pthread_mutex_lock(&mb->mutex);
+	        pthread_cond_wait(&mb->condition, &mb->mutex);
+	        pthread_mutex_unlock(&mb->mutex);
+	    }
 	    break;
 	case NO_REASON:
 	    printf("CPU is waiting for no reason!\n");

@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #include "sdl_text.h"
 #include "motherboard.h"
@@ -154,7 +155,8 @@ void update_tex_disassembly(SDL_Texture *texture, struct debugger *debugger)
     SDL_SetRenderTarget(renderer, texture);
     SDL_SetRenderDrawColor(renderer, 64, 64, 64, 255);
     SDL_RenderClear(renderer);
-    for (int i = 0; i < 15; i++) {
+    int lines = debugger->disassembly_lines < 15 ? debugger->disassembly_lines : 15;
+    for (int i = 0; i < lines; i++) {
         int current = EA(debugger->cpu->cs, debugger->cpu->ip) == debugger->disassembly_addresses[i];
         sdlprintf(renderer, 0, 16*i,
                   current ? &(struct colour){ 255, 255, 255, 100 } : &(struct colour){ 255, 170, 170, 170 },
@@ -220,14 +222,12 @@ int gui_loop()
 		}
 	    }
         }
-
 	update_tex_title(tex_screen);
 	if (debugger->step != mb->step) {
 	    debugger_step(debugger);
 	    update_tex_regview(tex_regview_fg, debugger);
 	    update_tex_disassembly(tex_disassembly, debugger);
 	}
-	
 	SDL_SetRenderTarget(renderer, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
