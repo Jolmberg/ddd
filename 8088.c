@@ -281,9 +281,9 @@ void shift8(struct iapx88 *cpu, int steps) {
     case 0x20: /* SHL */
         if (steps > 0) {
             temp = *cpu->operand8_1 << (steps - 1);
-            set_flag(cpu, FLAG_OF, (*cpu->operand8_1 & 0x80) ^ (temp & 0x80));
-            set_flag(cpu, FLAG_CF, (temp & 0x80));
             *cpu->operand8_1 = temp << 1;
+            set_flag(cpu, FLAG_CF, (temp & 0x80));
+            set_flag(cpu, FLAG_OF, (*cpu->operand8_1 & 0x80) ^ (temp & 0x80));
         } else {
             set_flag(cpu, FLAG_OF, 0);
         }
@@ -305,6 +305,7 @@ int shift8_1(struct iapx88 *cpu)
 {
     printf("shifting by 1\n");
     shift8(cpu, 1);
+    cpu->plan_step++;
     return 2;
 }
 
@@ -315,6 +316,8 @@ int shift16_1(struct iapx88 *cpu) /* flork */
     }
     set_flag(cpu, FLAG_CF, *cpu->operand8_1 & 1);
     *cpu->operand8_1 >>= 1;
+    cpu->plan_step++;
+
     return 2;
 }
 
@@ -323,6 +326,7 @@ int shift8_cl(struct iapx88 *cpu)
     printf("shifting by cl\n");
     int steps = cpu->cl;
     shift8(cpu, steps);
+    cpu->plan_step++;
     return 8 + 4 * steps;
     /* if (cpu->cl > 0) { */
     /*     if (*cpu->operand8_1 & 0x80) { */
@@ -349,6 +353,7 @@ int shift16_cl(struct iapx88 *cpu)
     } else {
         set_flag(cpu, FLAG_OF, 0);
     }
+    cpu->plan_step++;
     return 8 + 4 * cpu->cl;
 }
 
@@ -380,6 +385,17 @@ int stc(struct iapx88 *cpu)
 
 int read_modregrm8(struct iapx88 *cpu)
 {
+    printf("read_modregrm8\n");
+    cpu->operand8_1 = cpu->reg8 + REG8INDEX((cpu->cur_inst[1] >> 3) & 7);
+
+    switch (cpu->cur_inst[1] & 0xC0) {
+    case 0xC0:
+        cpu->operand8_2 = cpu->reg8 + REG8INDEX(cpu->cur_inst[1] & 7);
+        cpu->plan_step++;
+        break;
+    }
+    return 0;
+
     return 0;
 }
 
@@ -407,6 +423,7 @@ int write_modxxxrm8(struct iapx88 *cpu)
     case 0xC0:
         printf("japp\n");
         cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)] = *cpu->operand8_1;
+        cpu->plan_step++;
         break;
     }
     return 0;
@@ -441,6 +458,7 @@ int execute(struct iapx88 *cpu)
 int decode(struct iapx88 *cpu)
 {
     printf("decode!!!!\n");
+    cpu->return_reason = NO_REASON;
     if (!instruction_plan[cpu->cur_inst[0]]) {
         int cycles = do_operation(cpu);
         cleanup(cpu);
