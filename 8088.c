@@ -48,7 +48,8 @@ const uint8_t instruction_length[256] =
 /* }; */
 
 
-int (*plan_modregrm8[3])(struct iapx88 *cpu) = { read_modregrm8, do_operation, write_modregrm8 };
+int (*plan_modregrm8[4])(struct iapx88 *cpu) = { read_modregrm8, do_operation, write_modregrm8, cleanup };
+int (*plan_modxxxrm8[4])(struct iapx88 *cpu) = { read_modxxxrm8, do_operation, write_modxxxrm8, cleanup };
 
 
 int (**instruction_plan[256])(struct iapx88 *cpu) =
@@ -65,7 +66,7 @@ int (**instruction_plan[256])(struct iapx88 *cpu) =
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  plan_modxxxrm8, NULL, plan_modxxxrm8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
@@ -79,13 +80,13 @@ int (*operation[256])(struct iapx88 *cpu) =
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   jo, jno, jb, jae, je, jne, NULL, NULL, js, jns, jp, jnp, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, sahf, lahf,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  shift8_1, shift16_1, shift8_cl, shift16_cl, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, jmp_direct_is, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, clc, stc, cli, NULL, NULL, NULL, NULL, NULL };
 
 int fetch(struct iapx88 *cpu);
 int decode(struct iapx88 *cpu);
@@ -164,8 +165,9 @@ uint16_t word_from_bytes(uint8_t *bytes)
 }
 
 // An instruction has finished executing, reset the state machine
-void cleanup(struct iapx88 *cpu)
+int cleanup(struct iapx88 *cpu)
 {
+    printf("cleanup\n");
     if (cpu->jumped) {
         cpu->prefetch_usage = 0;
         cpu->prefetch_ip = cpu->ip;
@@ -180,6 +182,7 @@ void cleanup(struct iapx88 *cpu)
     cpu->next_step = fetch;
     cpu->state = CPU_FETCH;
     cpu->return_reason = WAIT_INTERRUPTIBLE;
+    return 0;
 }
 
 int branch(struct iapx88 *cpu, int taken)
@@ -188,38 +191,9 @@ int branch(struct iapx88 *cpu, int taken)
     if (taken) {
         cpu->ip = cpu->ip + 2 + (int8_t)cpu->cur_inst[1];
         cycles += 12;
+        cpu->jumped = 1;
     }
-    cpu->jumped = 1;
     return cycles;
-}
-
-int jo(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_OF); }
-int jno(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_OF)); }
-int jb(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
-int jae(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
-int je(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_ZF); }
-int jne(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_ZF)); }
-int js(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_SF); }
-int jns(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_SF)); }
-
-int jp(struct iapx88 *cpu)
-{
-    iapx88_update_flag_pf(cpu);
-    return branch(cpu, cpu->flags & FLAG_PF);
-}
-
-int jnp(struct iapx88 *cpu)
-{
-    iapx88_update_flag_pf(cpu);
-    return branch(cpu, !(cpu->flags & FLAG_PF));
-}
-
-int jmp_direct_is(struct iapx88 *cpu)
-{
-    cpu->ip = word_from_bytes(cpu->cur_inst + 1);
-    cpu->cs = word_from_bytes(cpu->cur_inst + 3);
-    cpu->jumped = 1;
-    return 15;
 }
 
 void set_flag(struct iapx88 *cpu, uint16_t flag, int state)
@@ -254,6 +228,156 @@ void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
     set_flag(cpu, FLAG_OF, 0);
 }
 
+int jo(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_OF); }
+int jno(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_OF)); }
+int jb(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
+int jae(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_CF)); }
+int je(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_ZF); }
+int jne(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_ZF)); }
+int js(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_SF); }
+int jns(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_SF)); }
+
+int jp(struct iapx88 *cpu)
+{
+    iapx88_update_flag_pf(cpu);
+    return branch(cpu, cpu->flags & FLAG_PF);
+}
+
+int jnp(struct iapx88 *cpu)
+{
+    iapx88_update_flag_pf(cpu);
+    return branch(cpu, !(cpu->flags & FLAG_PF));
+}
+
+int sahf(struct iapx88 *cpu)
+{
+    cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+    cpu->flag_pf_source = cpu->flags & FLAG_PF;
+    return 4;
+}
+
+int lahf(struct iapx88 *cpu)
+{
+    iapx88_update_flag_pf(cpu);
+    cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
+    return 4;
+}
+
+int mov_reg8_imm(struct iapx88 *cpu)
+{
+    cpu->reg8[REG8INDEX(cpu->cur_inst[0] & 7)] = cpu->cur_inst[1];
+    return 4;
+}
+
+int mov_reg16_imm(struct iapx88 *cpu)
+{
+    cpu->reg16[cpu->cur_inst[0] & 7] = word_from_bytes(cpu->cur_inst + 1);
+    return 4;
+}
+
+void shift8(struct iapx88 *cpu, int steps) {
+    uint8_t temp;
+    switch (cpu->cur_inst[1] & 0x38) {
+    case 0x20: /* SHL */
+        if (steps > 0) {
+            temp = *cpu->operand8_1 << (steps - 1);
+            set_flag(cpu, FLAG_OF, (*cpu->operand8_1 & 0x80) ^ (temp & 0x80));
+            set_flag(cpu, FLAG_CF, (temp & 0x80));
+            *cpu->operand8_1 = temp << 1;
+        } else {
+            set_flag(cpu, FLAG_OF, 0);
+        }
+        break;
+    case 0x28: /* SHR */
+        if (steps > 0) {
+            temp = *cpu->operand8_1 >> (steps - 1);
+            set_flag(cpu, FLAG_OF, *cpu->operand8_1 & 0x80);
+            set_flag(cpu, FLAG_CF, temp & 1);
+            *cpu->operand8_1 = temp >> 1;
+        } else {
+            set_flag(cpu, FLAG_OF, 0);
+        }
+        break;
+    }
+}
+
+int shift8_1(struct iapx88 *cpu)
+{
+    printf("shifting by 1\n");
+    shift8(cpu, 1);
+    return 2;
+}
+
+int shift16_1(struct iapx88 *cpu) /* flork */
+{
+    if (*cpu->operand8_1 & 0x80) {
+        set_flag(cpu, FLAG_OF, 0);
+    }
+    set_flag(cpu, FLAG_CF, *cpu->operand8_1 & 1);
+    *cpu->operand8_1 >>= 1;
+    return 2;
+}
+
+int shift8_cl(struct iapx88 *cpu)
+{
+    printf("shifting by cl\n");
+    int steps = cpu->cl;
+    shift8(cpu, steps);
+    return 8 + 4 * steps;
+    /* if (cpu->cl > 0) { */
+    /*     if (*cpu->operand8_1 & 0x80) { */
+    /*         set_flag(cpu, FLAG_OF, 0); */
+    /*     } */
+    /*     *cpu->operand8_1 >>= (cpu->cl - 1); */
+    /*     set_flag(cpu, FLAG_CF, *cpu->operand8_1 & 1); */
+    /*     *cpu->operand8_1 >>= 1; */
+    /* } else { */
+    /*     set_flag(cpu, FLAG_OF, 0); */
+    /* } */
+    /* return 8 + 4 * cpu->cl; */
+}
+
+int shift16_cl(struct iapx88 *cpu)
+{
+    if (cpu->cl > 0) {
+        if (*cpu->operand8_1 & 0x80) {
+            set_flag(cpu, FLAG_OF, 0);
+        }
+        *cpu->operand8_1 >>= (cpu->cl - 1);
+        set_flag(cpu, FLAG_CF, *cpu->operand8_1 & 1);
+        *cpu->operand8_1 >>= 1;
+    } else {
+        set_flag(cpu, FLAG_OF, 0);
+    }
+    return 8 + 4 * cpu->cl;
+}
+
+int jmp_direct_is(struct iapx88 *cpu)
+{
+    cpu->ip = word_from_bytes(cpu->cur_inst + 1);
+    cpu->cs = word_from_bytes(cpu->cur_inst + 3);
+    cpu->jumped = 1;
+    return 15;
+}
+
+int cli(struct iapx88 *cpu)
+{
+    set_flag(cpu, FLAG_IF, 0);
+    return 2;
+}
+
+int clc(struct iapx88 *cpu)
+{
+    set_flag(cpu, FLAG_CF, 0);
+    return 2;
+}
+
+int stc(struct iapx88 *cpu)
+{
+    set_flag(cpu, FLAG_CF, 1);
+    return 2;
+}
+
 int read_modregrm8(struct iapx88 *cpu)
 {
     return 0;
@@ -261,6 +385,30 @@ int read_modregrm8(struct iapx88 *cpu)
 
 int write_modregrm8(struct iapx88 *cpu)
 {
+    return 0;
+}
+
+int read_modxxxrm8(struct iapx88 *cpu)
+{
+    printf("read_modxxxrm8\n");
+    switch (cpu->cur_inst[1] & 0xC0) {
+    case 0xC0:
+        cpu->operand8_1 = cpu->reg8 + REG8INDEX(cpu->cur_inst[1] & 7);
+        cpu->plan_step++;
+        break;
+    }
+    return 0;
+}
+
+int write_modxxxrm8(struct iapx88 *cpu)
+{
+    printf("write_modxxxrm8\n");
+    switch (cpu->cur_inst[1] & 0xC0) {
+    case 0xC0:
+        printf("japp\n");
+        cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)] = *cpu->operand8_1;
+        break;
+    }
     return 0;
 }
 
@@ -278,7 +426,14 @@ int execute(struct iapx88 *cpu)
 {
     printf("execute!!\n");
     cpu->next_step = execute;
-    int cycles = (**cpu->plan_step)(cpu);
+    int cycles = 0;
+    int (**last_plan_step)(struct iapx88 *cpu);
+
+    do {
+        printf("boelk\n");
+        last_plan_step = cpu->plan_step;
+        cycles += (**cpu->plan_step)(cpu);
+    } while (last_plan_step != cpu->plan_step);
     cpu->plan_step++;
     return cycles;
 }

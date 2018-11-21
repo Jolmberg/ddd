@@ -81,6 +81,8 @@ struct iapx88 {
     uint16_t prefetch_ip;
     int reg1, reg2;
     int jumped;
+    uint8_t *operand8_1, *operand8_2;
+    uint16_t *operand16_1, *operand16_2;
 };
 
 struct iapx88 *iapx88_create();
@@ -98,8 +100,11 @@ int biu_handle_response(struct iapx88 *cpu);
 #define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
 
 int read_modregrm8(struct iapx88 *cpu);
+int read_modxxxrm8(struct iapx88 *cpu);
 int do_operation(struct iapx88 *cpu);
 int write_modregrm8(struct iapx88 *cpu);
+int write_modxxxrm8(struct iapx88 *cpu);
+int cleanup(struct iapx88 *cpu);
 
 int jo(struct iapx88 *cpu);
 int jno(struct iapx88 *cpu);
@@ -112,6 +117,21 @@ int jns(struct iapx88 *cpu);
 int jp(struct iapx88 *cpu);
 int jnp(struct iapx88 *cpu);
 
+int sahf(struct iapx88 *cpu);
+int lahf(struct iapx88 *cpu);
+
+int mov_reg8_imm(struct iapx88 *cpu);
+int mov_reg16_imm(struct iapx88 *cpu);
+
+int shift8_1(struct iapx88 *cpu);
+int shift16_1(struct iapx88 *cpu);
+int shift8_cl(struct iapx88 *cpu);
+int shift16_cl(struct iapx88 *cpu);
+
 int jmp_direct_is(struct iapx88 *cpu);
+
+int cli(struct iapx88 *cpu);
+int clc(struct iapx88 *cpu);
+int stc(struct iapx88 *cpu);
 
 #endif
