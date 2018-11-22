@@ -81,8 +81,8 @@ struct iapx88 {
     uint16_t prefetch_ip;
     int reg1, reg2;
     int jumped;
-    uint8_t *operand8_1, *operand8_2;
-    uint16_t *operand16_1, *operand16_2;
+    uint8_t operand_reg1_8, operand_reg2_8;
+    uint16_t operand_reg1_16, operand_reg2_16;
 };
 
 struct iapx88 *iapx88_create();
