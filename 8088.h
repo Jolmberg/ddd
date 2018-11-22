@@ -81,8 +81,8 @@ struct iapx88 {
     uint16_t prefetch_ip;
     int reg1, reg2;
     int jumped;
-    uint8_t operand_reg1_8, operand_reg2_8;
-    uint16_t operand_reg1_16, operand_reg2_16;
+    uint8_t operand8_1, operand8_2;
+    uint16_t operand16_1, operand16_2;
 };
 
 struct iapx88 *iapx88_create();
@@ -99,12 +99,31 @@ int biu_handle_response(struct iapx88 *cpu);
 #define EA(seg, offs) ((((seg) << 4) + (offs)) & 0xFFFFF)
 #define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
 
+int read_modsegrm16(struct iapx88 *cpu);
+int write_modsegrm16(struct iapx88 *cpu);
+
+int read_modsegrm16_to(struct iapx88 *cpu);
+int write_modsegrm16_to(struct iapx88 *cpu);
+
+int read_modregrm16_to(struct iapx88 *cpu);
+int write_modregrm16_to(struct iapx88 *cpu);
+
 int read_modregrm8(struct iapx88 *cpu);
-int read_modxxxrm8(struct iapx88 *cpu);
-int do_operation(struct iapx88 *cpu);
 int write_modregrm8(struct iapx88 *cpu);
+
+int read_modregrm8_to(struct iapx88 *cpu);
+int write_modregrm8_to(struct iapx88 *cpu);
+
+int read_modxxxrm8(struct iapx88 *cpu);
 int write_modxxxrm8(struct iapx88 *cpu);
+
+int do_operation(struct iapx88 *cpu);
 int cleanup(struct iapx88 *cpu);
+
+int xor8(struct iapx88 *cpu);
+int xor16(struct iapx88 *cpu);
+
+int mov16(struct iapx88 *cpu);
 
 int jo(struct iapx88 *cpu);
 int jno(struct iapx88 *cpu);
