@@ -55,46 +55,47 @@ int (*plan_modsegrm16[4])(struct iapx88 *cpu) = { read_modsegrm16, do_operation,
 int (*plan_modsegrm16_to[4])(struct iapx88 *cpu) = { read_modsegrm16_to, do_operation, write_modsegrm16_to, cleanup };
 int (*plan_modxxxrm8[4])(struct iapx88 *cpu) = { read_modxxxrm8, do_operation, write_modxxxrm8, cleanup };
 
+//const struct instruction_desc df = {0, MOD_NONE, TARGET_NONE};
 
-int (**instruction_plan[256])(struct iapx88 *cpu) =
-{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, plan_modregrm8_to, plan_modregrm16_to, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, plan_modregrm16_to, plan_modsegrm16, NULL, plan_modsegrm16_to, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  plan_modxxxrm8, NULL, plan_modxxxrm8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+#define UGH {2, MOD_NONE, TARGET_NONE}
+#define BNN {0, MOD_NONE, TARGET_NONE}
+#define BMN {0, MOD_REGRM, TARGET_NONE}
+#define WMN {1, MOD_REGRM, TARGET_NONE}
+#define BRN {0, REG_REG, TARGET_NONE}
+#define WRN {1, REG_REG, TARGET_NONE}
+#define BXN {0, MOD_XXXRM, TARGET_NONE}
+#define BXR {0, MOD_XXXRM, TARGET_RM}
 
-int (*operation[256])(struct iapx88 *cpu) =
-{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, xor8, xor16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  jo, jno, jb, jae, je, jne, NULL, NULL, js, jns, jp, jnp, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, mov16, mov16, NULL, mov16, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, sahf, lahf,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg8_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm, mov_reg16_imm,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  shift8_1, shift16_1, shift8_cl, shift16_cl, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, jmp_direct_is, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, clc, stc, cli, NULL, NULL, NULL, NULL, NULL };
+struct instruction_desc description[256] =
+{ UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, {1, MOD_REGRM, TARGET_REG}, {1, MOD_SEGRM, TARGET_RM}, UGH, {1, MOD_SEGRM, TARGET_REG}, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  BXR, UGH, BXR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, UGH, UGH };
+
+#undef UGH
+#undef BNN
+#undef BMN
+#undef WMN
+#undef BRN
+#undef WRN
+#undef BXN
+#undef BXR
 
 int fetch(struct iapx88 *cpu);
 int decode(struct iapx88 *cpu);
-
+int execute(struct iapx88 *cpu);
 
 struct iapx88 *iapx88_create(void)
 {
@@ -605,50 +606,268 @@ int write_modxxxrm8(struct iapx88 *cpu)
 
 int do_operation(struct iapx88 *cpu)
 {
-    if (operation[cpu->cur_inst[0]] == NULL) {
-        printf("Unimplemented opcode 0x%x\n", cpu->cur_inst[0]);
-        return -1;
-    } else {
-        return (*operation[cpu->cur_inst[0]])(cpu);
-    }
+    /* if (operation[cpu->cur_inst[0]] == NULL) { */
+    /*     printf("Unimplemented opcode 0x%x\n", cpu->cur_inst[0]); */
+    /*     return -1; */
+    /* } else { */
+    /*     return (*operation[cpu->cur_inst[0]])(cpu); */
+    /* } */
+    return -1;
 }
 
 int execute(struct iapx88 *cpu)
 {
+    uint8_t temp8;
     printf("execute!!\n");
-    cpu->next_step = execute;
+    //cpu->next_step = execute;
     int cycles = 0;
-    int (**last_plan_step)(struct iapx88 *cpu);
+    switch (cpu->cur_inst[0]) {
+    case 0x30: /* xor modregrm (from reg8) */
+        *cpu->operand_rm8 ^= *cpu->operand_reg8;
+        set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
+        cycles = 3;
+        break;
+    case 0x32: /* xor modregrm (to reg8) */
+        *cpu->operand_reg8 ^= *cpu->operand_rm8;
+        set_flags_from_bitwise8(cpu, *cpu->operand_reg8);
+        cycles = 3;
+        break;
+    case 0x31: /* xor modregrm (from reg16) */
+        *cpu->operand_rm16 ^= *cpu->operand_reg16;
+        set_flags_from_bitwise16(cpu, *cpu->operand_rm16);
+        cycles = 3;
+        break;
+    case 0x33: /* xor modregrm (to reg16) */
+        *cpu->operand_reg16 ^= *cpu->operand_rm16;
+        set_flags_from_bitwise16(cpu, *cpu->operand_reg16);
+        cycles = 3;
+        break;
+    case 0x70: /* branches */
+        cycles = branch(cpu, cpu->flags & FLAG_OF); // JO
+        break;
+    case 0x71:
+        cycles = branch(cpu, !(cpu->flags & FLAG_OF)); // JNO
+        break;
+    case 0x72:
+        cycles = branch(cpu, cpu->flags & FLAG_CF); // JB
+        break;
+    case 0x73:
+        cycles = branch(cpu, !(cpu->flags & FLAG_CF)); // JAE
+        break;
+    case 0x74:
+        cycles = branch(cpu, cpu->flags & FLAG_ZF); // JE
+        break;
+    case 0x75:
+        cycles = branch(cpu, !(cpu->flags & FLAG_ZF)); // JNE
+        break;
+    case 0x78:
+        cycles = branch(cpu, cpu->flags & FLAG_SF); // JS
+        break;
+    case 0x79:
+        cycles = branch(cpu, !(cpu->flags & FLAG_SF)); // JNS
+        break;
+    case 0x7a:
+        iapx88_update_flag_pf(cpu);
+        cycles = branch(cpu, cpu->flags & FLAG_PF); // JP
+        break;
+    case 0x7b:
+        iapx88_update_flag_pf(cpu);
+        cycles = branch(cpu, !(cpu->flags & FLAG_PF)); // JNP
+        break;
+    case 0x8b: /* MOV modregr/m to reg16 */
+        *cpu->operand_reg16 = *cpu->operand_rm16;
+        cycles = 2;
+        break;
+    case 0x8c: /* MOV modregr/m from segreg */
+        *cpu->operand_rm16 = *cpu->operand_reg16;
+        cycles = 2;
+        break;
+    case 0x8e: /* MOV modregr/m to segreg */
+        *cpu->operand_reg16 = *cpu->operand_rm16;
+        cycles = 2;
+        break;
+    case 0xB0: /* MOV reg8, immediate */
+    case 0xB1:
+    case 0xB2:
+    case 0xB3:
+    case 0xB4:
+    case 0xB5:
+    case 0xB6:
+    case 0xB7:
+        *cpu->operand_reg8 = cpu->cur_inst[1];
+        printf("mork\n");
+        cycles = 4;
+        break;
+    case 0xB8: /* MOV reg16, immediate */
+    case 0xB9:
+    case 0xBA:
+    case 0xBB:
+    case 0xBC:
+    case 0xBD:
+    case 0xBE:
+    case 0xBF:
+        *cpu->operand_reg16 = word_from_bytes(cpu->cur_inst + 1);
+        cycles = 4;
+        break;
+    case 0x9E: /* SAHF */
+        cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+        cpu->flag_pf_source = cpu->flags & FLAG_PF;
+        cycles = 4;
+        break;
+    case 0x9F: /* LAHF */
+        iapx88_update_flag_pf(cpu);
+        cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
+        cycles = 4;
+        break;
+    case 0xD0: /* shift/rotate by 1 */
+        switch(cpu->cur_inst[1] & 0x38) {
+        case 0x20: /* SHL modxxxrm, 1 */
+            set_flag(cpu, FLAG_CF, (*cpu->operand_rm8 & 0x80));
+            temp8 = *cpu->operand_rm8 << 1;
+            set_flag(cpu, FLAG_OF, (*cpu->operand_rm8 & 0x80) ^ (temp8 & 0x80));
+            *cpu->operand_rm8 = temp8;
+            update_flags_pf_zf_sf_8(cpu, cpu->operand8_1);
+            cycles = 2;
+            break;
+        }
+        break;
+    case 0xD2: /* shift/rotate by cl */
+        switch(cpu->cur_inst[1] & 0x38) {
+        case 0x28: /* SHR modxxxrm, cl */
+            cycles = 8 + 4 * cpu->cl; // Set cycles here because cl might change
+            if (cpu->cl > 0) {
+                *cpu->operand_rm8 >>= (cpu->cl - 1);
+                set_flag(cpu, FLAG_CF, *cpu->operand_rm8 & 1);
+                *cpu->operand_rm8 >>= 1;
+                update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
+            }
+            break;
+        }
+        break;
+    case 0xEA: /* JMP direct intersegment */
+        cpu->cs = word_from_bytes(cpu->cur_inst + 3);
+        cpu->ip = word_from_bytes(cpu->cur_inst + 1);
+        cpu->jumped = 1;
+        cycles = 15;
+        break;
+    case 0xF8: /* CLC */
+        set_flag(cpu, FLAG_CF, 0);
+        cycles = 2;
+        break;
+    case 0xF9: /* STC */
+        set_flag(cpu, FLAG_CF, 1);
+        cycles = 2;
+        break;
+    case 0xFA: /* CLI */
+        set_flag(cpu, FLAG_IF, 0);
+        cycles = 2;
+        break;
+        /* case 0xFF: /\* PUSH, CALL, JMP, INC, DEC modxxxr/m *\/ */
+        /* 	modregrm = cpu->cur_inst[1]; */
+        /* 	switch (modregrm & 0x38) { */
+        /* 	case 0x30: */
+        /* 	    cpu->reg1 = modregrm & 7; */
+        /* 	} */
+    default:
+        printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);
+        return -1;
+    }
 
-    do {
-        printf("boelk\n");
-        last_plan_step = cpu->plan_step;
-        cycles += (**cpu->plan_step)(cpu);
-    } while (last_plan_step != cpu->plan_step);
-    //cpu->plan_step++;
+    cleanup(cpu);
     return cycles;
 }
 
 int decode(struct iapx88 *cpu)
 {
     printf("decode!!!!\n");
-    cpu->return_reason = NO_REASON;
-    if (!instruction_plan[cpu->cur_inst[0]]) {
-        int cycles = do_operation(cpu);
-        cleanup(cpu);
-        return cycles;
-    } else {
-        cpu->plan_step = instruction_plan[cpu->cur_inst[0]];
-        return execute(cpu);
+    int reg, rm;
+    struct instruction_desc *desc = &description[cpu->cur_inst[0]];
+    if (desc->word == 2) {
+        printf("Unimplemented opcode! 0x%x\n", cpu->cur_inst[0]);
+        return -1;
     }
-    //cpu->plan_step = 
-    /* switch (instruction_type[cpu->cur_inst[0]]) { */
-    /* case MODREGRM8: */
-    /*     cpu->plan[0] = read_modregrm_8; */
-    /*     cpu->plan[1] = instruction_function[cpu->cur_inst[0]]; */
-    /*     cpu->plan[2] = write_modregrm_8; */
-    /* } */
-    return -1;
+    cpu->return_reason = NO_REASON;
+    switch (desc->mod) {
+    case MOD_REGRM:
+        reg = (cpu->cur_inst[1] >> 3) & 7;
+        if (desc->word) {
+            cpu->operand_reg16 = cpu->reg16 + reg;
+        } else {
+            cpu->operand_reg8 = cpu->reg8 + REG8INDEX(reg);
+        }
+        rm = cpu->cur_inst[1] & 7;
+        switch (cpu->cur_inst[1] & 0xC0){
+        case 0xC0:
+            if (desc->word) {
+                cpu->operand_rm16 = cpu->reg16 + rm;
+            } else {
+                cpu->operand_rm8 = cpu->reg8 + REG8INDEX(rm);
+            }
+            break;
+        }
+        break;
+    case MOD_SEGRM:
+        reg = (cpu->cur_inst[1] >> 3) & 3;
+        cpu->operand_reg16 = cpu->segreg + reg;
+        rm = cpu->cur_inst[1] & 7;
+        switch (cpu->cur_inst[1] & 0xC0){
+        case 0xC0:
+            cpu->operand_rm16 = cpu->reg16 + rm;
+            break;
+        }
+        break;
+    case MOD_XXXRM:
+        rm = cpu->cur_inst[1] & 7;
+        if (desc->word) {
+            cpu->operand_rm16 = cpu->reg16 + rm;
+        } else {
+            cpu->operand_rm8 = cpu->reg8 + REG8INDEX(rm);
+        }
+        break;
+    case REG_REG:
+        if (desc->word) {
+            cpu->operand_reg16 = cpu->reg16 + (cpu->cur_inst[0] & 7);
+        } else {
+            cpu->operand_reg8 = cpu->reg8 + REG8INDEX(cpu->cur_inst[0] & 7);
+        }
+        break;
+    case REG_SEG:
+        cpu->operand_reg16 = cpu->segreg + ((cpu->cur_inst[0] >> 3) & 7);
+        break;
+    default:
+        printf("Unhandled mod type\n");
+        break;
+    }
+    switch (desc->target) {
+    case TARGET_REG:
+        if(desc->word) {
+            cpu->target16 = cpu->operand_reg16;
+        } else {
+            cpu->target8 = cpu->operand_reg8;
+        }
+        break;
+    case TARGET_RM:
+        if (desc->word) {
+            cpu->target16 = cpu->operand_rm16;
+        } else {
+            cpu->target8 = cpu->operand_rm8;
+        }
+        break;
+    case TARGET_BOTH:
+        if (desc->word) {
+            cpu->target16 = cpu->operand_reg16;
+            cpu->target16_2 = cpu->operand_rm16;
+        } else {
+            cpu->target8 = cpu->operand_reg8;
+            cpu->target8_2 = cpu->operand_rm8;
+        }
+        break;
+    default:
+        break;
+    }
+
+    cpu->next_step = execute;
+    return 0;
 }
 
 int fetch(struct iapx88 *cpu)

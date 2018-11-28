@@ -19,6 +19,14 @@ enum flags { FLAG_OF=0x800,
              FLAG_PF=0x4,
              FLAG_CF=0x1 };
 
+enum mod_type { MOD_NONE, MOD_REGRM, MOD_SEGRM, MOD_XXXRM, REG_REG, REG_SEG };
+enum target { TARGET_NONE, TARGET_REG, TARGET_RM, TARGET_BOTH };
+struct instruction_desc {
+    int word;
+    enum mod_type mod;
+    enum target target;
+};
+
 /* enum instruction_type { _, */
 /*                         SIMPLE, */
 /*                         REGISTER8_IMMEDIATE, */
@@ -81,6 +89,8 @@ struct iapx88 {
     uint16_t prefetch_ip;
     int reg1, reg2;
     int jumped;
+    uint8_t *operand_reg8, *operand_rm8, *target8, *target8_2;
+    uint16_t *operand_reg16, *operand_rm16, *target16, *target16_2;
     uint8_t operand8_1, operand8_2;
     uint16_t operand16_1, operand16_2;
 };
