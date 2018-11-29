@@ -43,7 +43,6 @@ void *mb_run(void *mbarg)
 {
     struct motherboard *mb = mbarg;
     int cycles = 0;
-    int runs = 10000;
     struct iapx88 *cpu = mb->cpu;
     if (mb->debug) {
         pthread_mutex_lock(&mb->mutex);
@@ -88,13 +87,6 @@ void *mb_run(void *mbarg)
 	        pthread_cond_wait(&mb->condition, &mb->mutex);
 	        pthread_mutex_unlock(&mb->mutex);
 	    }
-            printf("Well cpu->ip is 0x%x\n", cpu->ip);
-            if (cpu->ip == 0xe0ab) {
-                if (runs-- == 0) {
-                    return NULL;
-                }
-                iapx88_reset(cpu);
-            }
 	    break;
 	case NO_REASON:
 	    printf("CPU is waiting for no reason!\n");

@@ -75,7 +75,6 @@ struct iapx88 *iapx88_create(void)
 
 void iapx88_reset(struct iapx88 *cpu)
 {
-    printf("Resetting cpu!\n");
     cpu->flags = 0xF000;
     cpu->flag_pf_source = 0;
     cpu->ip = 0;
@@ -291,7 +290,6 @@ int execute(struct iapx88 *cpu)
     case 0xB6:
     case 0xB7:
         *cpu->operand_reg8 = cpu->cur_inst[1];
-        printf("mork\n");
         cycles = 4;
         break;
     case 0xB8: /* MOV reg16, immediate */
@@ -463,9 +461,9 @@ int decode(struct iapx88 *cpu)
     default:
         break;
     }
-
-    cpu->next_step = execute;
-    return 0;
+    return execute(cpu);
+    //cpu->next_step = execute;
+    //return 0;
 }
 
 int fetch(struct iapx88 *cpu)

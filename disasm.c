@@ -11,14 +11,15 @@
           oN - opcode name is in extended list N at index given by the next byte
           n8 - modxxxr/m byte 8 bit registers
           n16 - modxxxr/m byte 16 bit registers
-          m8 - modregr/m byte 8 bit registers
-          m16 - modregr/m byte 16 bit registers
-          M8 - modregr/m byte 8 bit registers reverse order
-          ms - modregr/m byte segregs
-          Ms - modregr/m byte segregs reverse order */
+          m8 - modregr/m byte 8 bit registers target r/m
+          m16 - modregr/m byte 16 bit registers target r/m
+          M8 - modregr/m byte 8 bit registers target register
+          M16 - modregr/m byte 16 bit registers target register
+          ms - modregr/m byte segregs target r/m
+          Ms - modregr/m byte segregs target register */
 char instr_format[256][20] =
 {
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "or $1M16", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "xor $1m8", "xor $1m16", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -126,6 +127,24 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                     buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
                     break;
                 }
+                format += 3;
+            } else if (!strncmp(format, "M8", 2)) {
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s, ", reg8_name[modregrm & 7]);
+                    break;
+                }
+                buffer += sprintf(buffer, "%s", reg8_name[(modregrm >> 3) & 7]);
+                format += 2;
+            } else if (!strncmp(format, "M16", 2)) {
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                switch (modregrm & 0xC0) {
+                case 0xC0:
+                    buffer += sprintf(buffer, "%s, ", reg16_name[modregrm & 7]);
+                    break;
+                }
+                buffer += sprintf(buffer, "%s", reg16_name[(modregrm >> 3) & 7]);
                 format += 3;
             } else if (!strncmp(format, "ms", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);

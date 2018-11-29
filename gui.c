@@ -35,7 +35,7 @@ int gui_init()
     mb = mb_create();
     cpu = mb->cpu;
     debugger = debugger_create(mb);
-    mb->debug = 0;
+    mb->debug = 1;
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
 
@@ -183,7 +183,6 @@ int gui_loop()
     SDL_Rect screen_rect = { 0, 0, 320, 240};
     SDL_Rect rect_regview = { 320, 240, 320, 240};
     SDL_Rect rect_disassembly = { 320, 0, 320, 240};
-    struct registers regs;
     pthread_t emulator;
     int tret = pthread_create(&emulator, NULL, mb_run, (void *)mb);
     if(tret)
@@ -204,9 +203,6 @@ int gui_loop()
     SDL_SetTextureBlendMode(tex_regview_fg, SDL_BLENDMODE_BLEND);
     init_tex_regview(tex_regview_bg);
     
-    float i = 0;
-    pthread_join(emulator, NULL);
-    return 0;
     while (1) {
         while (SDL_PollEvent(&event)) {
 	    if (event.type == SDL_QUIT) {
