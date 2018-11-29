@@ -43,14 +43,14 @@ void *mb_run(void *mbarg)
 {
     struct motherboard *mb = mbarg;
     int cycles = 0;
+    int runs = 10000;
     struct iapx88 *cpu = mb->cpu;
     if (mb->debug) {
         pthread_mutex_lock(&mb->mutex);
         pthread_cond_wait(&mb->condition, &mb->mutex);
         pthread_mutex_unlock(&mb->mutex);
     }
-    while (1) {
-
+    while (1) {        
 	int eu_cycles = (*cpu->next_step)(mb->cpu); //iapx88_step(mb->cpu);
 	int biu_cycles = 0;
 	printf("EU ran for %d cycles\n", eu_cycles);
@@ -88,6 +88,13 @@ void *mb_run(void *mbarg)
 	        pthread_cond_wait(&mb->condition, &mb->mutex);
 	        pthread_mutex_unlock(&mb->mutex);
 	    }
+            printf("Well cpu->ip is 0x%x\n", cpu->ip);
+            if (cpu->ip == 0xe0ab) {
+                if (runs-- == 0) {
+                    return NULL;
+                }
+                iapx88_reset(cpu);
+            }
 	    break;
 	case NO_REASON:
 	    printf("CPU is waiting for no reason!\n");

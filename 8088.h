@@ -27,28 +27,6 @@ struct instruction_desc {
     enum target target;
 };
 
-/* enum instruction_type { _, */
-/*                         SIMPLE, */
-/*                         REGISTER8_IMMEDIATE, */
-/*                         REGISTER16_IMMEDIATE, */
-/*                         IMMEDIATE8, */
-/*                         IMMEDIATE16, */
-/*                         MODREGRM8_TOREG, */
-/*                         MODREGRM8_FROMREG, */
-/*                         MODREGRM16, */
-/*                         MODSEGRM, */
-/*                         MODXXXRM8, */
-/*                         MODXXXRM16, */
-/*                         MODXXXRM8_IMMEDIATE, */
-/*                         MODXXXRM16_IMMEDIATE, */
-/*                         SILLY, */
-/*                         OFFSET_SEGMENT}; */
-
-
-/* const int (*p)(struct iapx88 *cpu)[32] = { { NULL }, */
-/*                                               { do_instruction */
-/*                                               {  */
-
 
 struct iapx88 {
     // Registers
@@ -79,7 +57,6 @@ struct iapx88 {
     uint16_t eu_wanted_segment, eu_wanted_offset;
     uint8_t eu_biu_byte;
     
-    int (**plan_step)(struct iapx88 *cpu);
     int (*next_step)(struct iapx88 *cpu);
     int state;
     int segment_override;
@@ -87,12 +64,9 @@ struct iapx88 {
     int cur_inst_read;
     int cur_inst_len;
     uint16_t prefetch_ip;
-    int reg1, reg2;
     int jumped;
     uint8_t *operand_reg8, *operand_rm8, *target8, *target8_2;
     uint16_t *operand_reg16, *operand_rm16, *target16, *target16_2;
-    uint8_t operand8_1, operand8_2;
-    uint16_t operand16_1, operand16_2;
 };
 
 struct iapx88 *iapx88_create();
@@ -109,58 +83,6 @@ int biu_handle_response(struct iapx88 *cpu);
 #define EA(seg, offs) ((((seg) << 4) + (offs)) & 0xFFFFF)
 #define REG8INDEX(reg) ((((reg) << 1) & 7) | ((reg) >> 2))
 
-int read_modsegrm16(struct iapx88 *cpu);
-int write_modsegrm16(struct iapx88 *cpu);
-
-int read_modsegrm16_to(struct iapx88 *cpu);
-int write_modsegrm16_to(struct iapx88 *cpu);
-
-int read_modregrm16_to(struct iapx88 *cpu);
-int write_modregrm16_to(struct iapx88 *cpu);
-
-int read_modregrm8(struct iapx88 *cpu);
-int write_modregrm8(struct iapx88 *cpu);
-
-int read_modregrm8_to(struct iapx88 *cpu);
-int write_modregrm8_to(struct iapx88 *cpu);
-
-int read_modxxxrm8(struct iapx88 *cpu);
-int write_modxxxrm8(struct iapx88 *cpu);
-
-int do_operation(struct iapx88 *cpu);
-int cleanup(struct iapx88 *cpu);
-
-int xor8(struct iapx88 *cpu);
-int xor16(struct iapx88 *cpu);
-
-int mov16(struct iapx88 *cpu);
-
-int jo(struct iapx88 *cpu);
-int jno(struct iapx88 *cpu);
-int jb(struct iapx88 *cpu);
-int jae(struct iapx88 *cpu);
-int je(struct iapx88 *cpu);
-int jne(struct iapx88 *cpu);
-int js(struct iapx88 *cpu);
-int jns(struct iapx88 *cpu);
-int jp(struct iapx88 *cpu);
-int jnp(struct iapx88 *cpu);
-
-int sahf(struct iapx88 *cpu);
-int lahf(struct iapx88 *cpu);
-
-int mov_reg8_imm(struct iapx88 *cpu);
-int mov_reg16_imm(struct iapx88 *cpu);
-
-int shift8_1(struct iapx88 *cpu);
-int shift16_1(struct iapx88 *cpu);
-int shift8_cl(struct iapx88 *cpu);
-int shift16_cl(struct iapx88 *cpu);
-
-int jmp_direct_is(struct iapx88 *cpu);
-
-int cli(struct iapx88 *cpu);
-int clc(struct iapx88 *cpu);
-int stc(struct iapx88 *cpu);
+//int cleanup(struct iapx88 *cpu);
 
 #endif

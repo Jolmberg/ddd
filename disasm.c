@@ -48,7 +48,6 @@ const char segreg_name[4][3] = { "es", "cs", "ss", "ds" };
 
 int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t segment, uint16_t offset) {
     int segment_override = -1;
-    uint32_t address = EA(segment, offset);
     uint8_t b = mb_memory_peek(mb, segment, offset);
     if (IS_SEGMENT_OVERRIDE(b)) {
 	segment_override = b;
@@ -56,7 +55,6 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
 	b = mb_memory_peek(mb, segment, offset);
     }
     char *format = instr_format[mb_memory_peek(mb, segment, offset)];
-    int i;
     int operand_distance = 0;
     int max_distance = 0;
     int modregrm, modxxxrm;
@@ -165,7 +163,7 @@ int disassemble_from_address(char **buffer, uint32_t *addresses, int *lengths, u
     uint32_t address;
     uint16_t new_offset;
     uint16_t new_segment;
-    for (int line = 0; line < max_lines; line++) {
+    for (line = 0; line < max_lines; line++) {
         address = EA(segment, offset);
 
         if (address == 0) {

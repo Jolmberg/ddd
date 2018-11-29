@@ -35,7 +35,7 @@ int gui_init()
     mb = mb_create();
     cpu = mb->cpu;
     debugger = debugger_create(mb);
-    mb->debug = 1;
+    mb->debug = 0;
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
 
@@ -205,6 +205,8 @@ int gui_loop()
     init_tex_regview(tex_regview_bg);
     
     float i = 0;
+    pthread_join(emulator, NULL);
+    return 0;
     while (1) {
         while (SDL_PollEvent(&event)) {
 	    if (event.type == SDL_QUIT) {

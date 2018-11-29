@@ -27,36 +27,6 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
-/* const enum instruction_type instruction_type[256] = */
-/* { */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, */
-/*     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ */
-/* }; */
-
-
-int (*plan_modregrm8[4])(struct iapx88 *cpu) = { read_modregrm8, do_operation, write_modregrm8, cleanup };
-int (*plan_modregrm8_to[4])(struct iapx88 *cpu) = { read_modregrm8_to, do_operation, write_modregrm8_to, cleanup };
-int (*plan_modregrm16_to[4])(struct iapx88 *cpu) = { read_modregrm16_to, do_operation, write_modregrm16_to, cleanup };
-int (*plan_modsegrm16[4])(struct iapx88 *cpu) = { read_modsegrm16, do_operation, write_modsegrm16, cleanup };
-int (*plan_modsegrm16_to[4])(struct iapx88 *cpu) = { read_modsegrm16_to, do_operation, write_modsegrm16_to, cleanup };
-int (*plan_modxxxrm8[4])(struct iapx88 *cpu) = { read_modxxxrm8, do_operation, write_modxxxrm8, cleanup };
-
-//const struct instruction_desc df = {0, MOD_NONE, TARGET_NONE};
-
 #define UGH {2, MOD_NONE, TARGET_NONE}
 #define BNN {0, MOD_NONE, TARGET_NONE}
 #define BMN {0, MOD_REGRM, TARGET_NONE}
@@ -105,6 +75,7 @@ struct iapx88 *iapx88_create(void)
 
 void iapx88_reset(struct iapx88 *cpu)
 {
+    printf("Resetting cpu!\n");
     cpu->flags = 0xF000;
     cpu->flag_pf_source = 0;
     cpu->ip = 0;
@@ -240,381 +211,6 @@ void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
     set_flag(cpu, FLAG_OF, 0);
 }
 
-// Instructions
-
-int xor8(struct iapx88 *cpu)
-{
-    printf("xor %d %d\n", cpu->operand8_1, cpu->operand8_2);
-    cpu->operand8_1 ^= cpu->operand8_2;
-    set_flags_from_bitwise8(cpu, cpu->operand8_1);
-    cpu->plan_step++;
-    return 3;
-}
-
-int xor16(struct iapx88 *cpu)
-{
-    printf("xor %d %d\n", cpu->operand16_1, cpu->operand16_2);
-    cpu->operand16_1 ^= cpu->operand16_2;
-    set_flags_from_bitwise16(cpu, cpu->operand16_1);
-    cpu->plan_step++;
-    return 3;
-}
-
-/* int bitwise(struct iapx88 *cpu) */
-/* { */
-/*     switch (cpu->cur_inst[1] & 0x38) { */
-/*     case */
-/*         }     */
-
-int jo(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_OF); }
-int jno(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_OF)); }
-int jb(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_CF); }
-int jae(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_CF)); }
-int je(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_ZF); }
-int jne(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_ZF)); }
-int js(struct iapx88 *cpu) { return branch(cpu, cpu->flags & FLAG_SF); }
-int jns(struct iapx88 *cpu) { return branch(cpu, !(cpu->flags & FLAG_SF)); }
-
-int jp(struct iapx88 *cpu)
-{
-    iapx88_update_flag_pf(cpu);
-    return branch(cpu, cpu->flags & FLAG_PF);
-}
-
-int jnp(struct iapx88 *cpu)
-{
-    iapx88_update_flag_pf(cpu);
-    return branch(cpu, !(cpu->flags & FLAG_PF));
-}
-
-int mov16(struct iapx88 *cpu)
-{
-    cpu->operand16_1 = cpu->operand16_2;
-    cpu->plan_step++;
-    return 2;
-}
-
-int sahf(struct iapx88 *cpu)
-{
-    cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
-    cpu->flag_pf_source = cpu->flags & FLAG_PF;
-    return 4;
-}
-
-int lahf(struct iapx88 *cpu)
-{
-    iapx88_update_flag_pf(cpu);
-    cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
-    return 4;
-}
-
-int mov_reg8_imm(struct iapx88 *cpu)
-{
-    cpu->reg8[REG8INDEX(cpu->cur_inst[0] & 7)] = cpu->cur_inst[1];
-    return 4;
-}
-
-int mov_reg16_imm(struct iapx88 *cpu)
-{
-    cpu->reg16[cpu->cur_inst[0] & 7] = word_from_bytes(cpu->cur_inst + 1);
-    return 4;
-}
-
-void shift8(struct iapx88 *cpu, int steps) {
-    uint8_t temp;
-    switch (cpu->cur_inst[1] & 0x38) {
-    case 0x20: /* SHL */
-        if (steps > 0) {
-            temp = cpu->operand8_1 << (steps - 1);
-            cpu->operand8_1 = temp << 1;
-            set_flag(cpu, FLAG_CF, (temp & 0x80));
-            set_flag(cpu, FLAG_OF, (cpu->operand8_1 & 0x80) ^ (temp & 0x80));
-        } else {
-            set_flag(cpu, FLAG_OF, 0);
-        }
-        break;
-    case 0x28: /* SHR */
-        if (steps > 0) {
-            temp = cpu->operand8_1 >> (steps - 1);
-            set_flag(cpu, FLAG_OF, cpu->operand8_1 & 0x80);
-            set_flag(cpu, FLAG_CF, temp & 1);
-            cpu->operand8_1 = temp >> 1;
-        } else {
-            set_flag(cpu, FLAG_OF, 0);
-        }
-        break;
-    }
-    update_flags_pf_zf_sf_8(cpu, cpu->operand8_1);
-}
-
-int shift8_1(struct iapx88 *cpu)
-{
-    printf("shifting by 1\n");
-    shift8(cpu, 1);
-    cpu->plan_step++;
-    return 2;
-}
-
-int shift16_1(struct iapx88 *cpu) /* flork */
-{
-    if (cpu->operand8_1 & 0x80) {
-        set_flag(cpu, FLAG_OF, 0);
-    }
-    set_flag(cpu, FLAG_CF, cpu->operand8_1 & 1);
-    cpu->operand8_1 >>= 1;
-    cpu->plan_step++;
-
-    return 2;
-}
-
-int shift8_cl(struct iapx88 *cpu)
-{
-    printf("shifting by cl\n");
-    int steps = cpu->cl;
-    shift8(cpu, steps);
-    cpu->plan_step++;
-    return 8 + 4 * steps;
-    /* if (cpu->cl > 0) { */
-    /*     if (cpu->operand8_1 & 0x80) { */
-    /*         set_flag(cpu, FLAG_OF, 0); */
-    /*     } */
-    /*     cpu->operand8_1 >>= (cpu->cl - 1); */
-    /*     set_flag(cpu, FLAG_CF, cpu->operand8_1 & 1); */
-    /*     cpu->operand8_1 >>= 1; */
-    /* } else { */
-    /*     set_flag(cpu, FLAG_OF, 0); */
-    /* } */
-    /* return 8 + 4 * cpu->cl; */
-}
-
-int shift16_cl(struct iapx88 *cpu) /* flork */
-{
-    if (cpu->cl > 0) {
-        if (cpu->operand8_1 & 0x80) {
-            set_flag(cpu, FLAG_OF, 0);
-        }
-        cpu->operand8_1 >>= (cpu->cl - 1);
-        set_flag(cpu, FLAG_CF, cpu->operand8_1 & 1);
-        cpu->operand8_1 >>= 1;
-    } else {
-        set_flag(cpu, FLAG_OF, 0);
-    }
-    cpu->plan_step++;
-    return 8 + 4 * cpu->cl;
-}
-
-int jmp_direct_is(struct iapx88 *cpu)
-{
-    cpu->ip = word_from_bytes(cpu->cur_inst + 1);
-    cpu->cs = word_from_bytes(cpu->cur_inst + 3);
-    cpu->jumped = 1;
-    return 15;
-}
-
-int cli(struct iapx88 *cpu)
-{
-    set_flag(cpu, FLAG_IF, 0);
-    return 2;
-}
-
-int clc(struct iapx88 *cpu)
-{
-    set_flag(cpu, FLAG_CF, 0);
-    return 2;
-}
-
-int stc(struct iapx88 *cpu)
-{
-    set_flag(cpu, FLAG_CF, 1);
-    return 2;
-}
-
-int read_modsegrm16(struct iapx88 *cpu)
-{
-    printf("read_modsegrm16\n");
-    cpu->operand16_2 = cpu->segreg[(cpu->cur_inst[1] >> 3) & 3];
-
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand16_1 = cpu->reg16[cpu->cur_inst[1] & 7];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modsegrm16(struct iapx88 *cpu)
-{
-    printf("write_modsegrm16\n");
-    //printf("operand %d reg %d\n", cpu->operand16_1, cpu->cur_inst[1] & 7);
-    cpu->reg16[cpu->cur_inst[1] & 7] = cpu->operand16_1;
-    cpu->plan_step++;
-    /* switch (cpu->cur_inst[1] & 0xC0) { */
-    /* case 0xC0: */
-    /*     cpu->operand16_2 = cpu->reg16[cpu->cur_inst[1] & 7]; */
-    /*     cpu->plan_step++; */
-    /*     break; */
-    /* } */
-    return 0;
-}
-
-int read_modsegrm16_to(struct iapx88 *cpu)
-{
-    printf("read_modsegrm16_to\n");
-    cpu->operand16_1 = cpu->segreg[(cpu->cur_inst[1] >> 3) & 3];
-
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand16_2 = cpu->reg16[cpu->cur_inst[1] & 7];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modsegrm16_to(struct iapx88 *cpu)
-{
-    printf("write_modsegrm16_to\n");
-    cpu->segreg[(cpu->cur_inst[1] >> 3) & 3] = cpu->operand16_1;
-    cpu->plan_step++;
-    /* switch (cpu->cur_inst[1] & 0xC0) { */
-    /* case 0xC0: */
-    /*     cpu->operand16_2 = cpu->reg16[cpu->cur_inst[1] & 7]; */
-    /*     cpu->plan_step++; */
-    /*     break; */
-    /* } */
-    return 0;
-}
-
-int read_modregrm16(struct iapx88 *cpu)
-{
-    printf("read_modregrm16\n");
-    cpu->operand16_2 = cpu->reg16[(cpu->cur_inst[1] >> 3) & 7];
-
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand16_1 = cpu->reg16[cpu->cur_inst[1] & 7];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modregrm16(struct iapx88 *cpu)
-{
-    printf("write_modregrm16\n");
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->reg16[cpu->cur_inst[1] & 7] = cpu->operand16_1;
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int read_modregrm16_to(struct iapx88 *cpu)
-{
-    printf("read_modregrm16\n");
-    cpu->operand16_1 = cpu->reg16[(cpu->cur_inst[1] >> 3) & 7];
-
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand16_2 = cpu->reg16[cpu->cur_inst[1] & 7];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modregrm16_to(struct iapx88 *cpu)
-{
-    printf("write_modregrm16\n");
-    cpu->reg16[(cpu->cur_inst[1] >> 3) & 7] = cpu->operand16_1;
-    cpu->plan_step++;
-    return 0;
-}
-
-
-int read_modregrm8(struct iapx88 *cpu)
-{
-    printf("read_modregrm8\n");
-    cpu->operand8_1 = cpu->reg8[REG8INDEX((cpu->cur_inst[1] >> 3) & 7)];
-
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand8_2 = cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modregrm8(struct iapx88 *cpu)
-{
-    printf("write_modregrm8\n");
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)] = cpu->operand8_1;
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int read_modregrm8_to(struct iapx88 *cpu)
-{
-    printf("to\n");
-    int c = read_modregrm8(cpu);
-    uint8_t temp = cpu->operand8_1;
-    cpu->operand8_1 = cpu->operand8_2;
-    cpu->operand8_2 = temp;
-    return c;
-}
-
-int write_modregrm8_to(struct iapx88 *cpu)
-{
-    printf("write_modregrm8_to\n");
-    cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)] = cpu->operand8_1;
-    cpu->plan_step++;
-    return 0;
-}
-
-int read_modxxxrm8(struct iapx88 *cpu)
-{
-    printf("read_modxxxrm8\n");
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        cpu->operand8_1 = cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)];
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int write_modxxxrm8(struct iapx88 *cpu)
-{
-    printf("write_modxxxrm8\n");
-    switch (cpu->cur_inst[1] & 0xC0) {
-    case 0xC0:
-        printf("japp\n");
-        cpu->reg8[REG8INDEX(cpu->cur_inst[1] & 7)] = cpu->operand8_1;
-        cpu->plan_step++;
-        break;
-    }
-    return 0;
-}
-
-int do_operation(struct iapx88 *cpu)
-{
-    /* if (operation[cpu->cur_inst[0]] == NULL) { */
-    /*     printf("Unimplemented opcode 0x%x\n", cpu->cur_inst[0]); */
-    /*     return -1; */
-    /* } else { */
-    /*     return (*operation[cpu->cur_inst[0]])(cpu); */
-    /* } */
-    return -1;
-}
-
 int execute(struct iapx88 *cpu)
 {
     uint8_t temp8;
@@ -726,7 +322,7 @@ int execute(struct iapx88 *cpu)
             temp8 = *cpu->operand_rm8 << 1;
             set_flag(cpu, FLAG_OF, (*cpu->operand_rm8 & 0x80) ^ (temp8 & 0x80));
             *cpu->operand_rm8 = temp8;
-            update_flags_pf_zf_sf_8(cpu, cpu->operand8_1);
+            update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
             cycles = 2;
             break;
         }
@@ -834,6 +430,8 @@ int decode(struct iapx88 *cpu)
     case REG_SEG:
         cpu->operand_reg16 = cpu->segreg + ((cpu->cur_inst[0] >> 3) & 7);
         break;
+    case MOD_NONE:
+        break;
     default:
         printf("Unhandled mod type\n");
         break;
@@ -896,9 +494,9 @@ int fetch(struct iapx88 *cpu)
 
 int iapx88_step(struct iapx88 *cpu)
 {
-    uint16_t word1, word2;
-    int reg1, reg2;
-    uint8_t temp8, modregrm;
+    /* uint16_t word1, word2; */
+    /* int reg1, reg2; */
+    /* uint8_t temp8, modregrm; */
 
     /* while (1) { */
     /*     switch (cpu->state) { */
