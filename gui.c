@@ -34,12 +34,11 @@ int gui_init()
     // Create emulator here for now
     mb = mb_create();
     cpu = mb->cpu;
-    debugger = debugger_create(mb);
-    debugger->breakpoint = 0xfe0b0;
     mb->debug = 0;
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
-
+    debugger = debugger_create(mb);
+    debugger->breakpoint = 0xfe0b0;
     return 0;    
 }
 
@@ -185,7 +184,8 @@ int gui_loop()
     SDL_Rect rect_regview = { 320, 240, 320, 240};
     SDL_Rect rect_disassembly = { 320, 0, 320, 240};
     pthread_t emulator;
-    int tret = pthread_create(&emulator, NULL, mb_run, (void *)mb);
+    int last_debugger_step = -2;
+    int tret = pthread_create(&emulator, NULL, debugger_run, (void *)debugger);
     if(tret)
     {
 	fprintf(stderr,"Failed to create thread: %d\n", tret);
@@ -216,17 +216,28 @@ int gui_loop()
 		    pthread_cond_signal(&mb->condition);
 		    pthread_mutex_unlock(&mb->mutex);
 		    break;
+                case SDLK_r:
+                    debugger->paused = 0;
+		    pthread_mutex_lock(&mb->mutex);
+		    pthread_cond_signal(&mb->condition);
+		    pthread_mutex_unlock(&mb->mutex);
+                    break;
 		case SDLK_q:
 		    return 0;
 		}
 	    }
         }
 	update_tex_title(tex_screen);
-	if (debugger->step != mb->step) {
-	    debugger_step(debugger);
+	/* if (debugger->step != mb->step) { */
+	/*     debugger_step(debugger); */
+	/*     update_tex_regview(tex_regview_fg, debugger); */
+	/*     update_tex_disassembly(tex_disassembly, debugger); */
+	/* } */
+        if (debugger->step != last_debugger_step) {
+            last_debugger_step = debugger->step;
 	    update_tex_regview(tex_regview_fg, debugger);
 	    update_tex_disassembly(tex_disassembly, debugger);
-	}
+        }
 	SDL_SetRenderTarget(renderer, NULL);
 	SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);

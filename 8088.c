@@ -24,11 +24,12 @@ const uint8_t instruction_length[256] =
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
 #define UGH {2, MOD_NONE, TARGET_NONE}
 #define BNN {0, MOD_NONE, TARGET_NONE}
+#define WNN {1, MOD_NONE, TARGET_NONE}
 #define BMN {0, MOD_REGRM, TARGET_NONE}
 #define WMN {1, MOD_REGRM, TARGET_NONE}
 #define BRN {0, REG_REG, TARGET_NONE}
@@ -51,11 +52,12 @@ struct instruction_desc description[256] =
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BXR, UGH, BXR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, UGH, BNN, UGH, UGH, UGH, BNN, WNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, UGH, UGH };
 
 #undef UGH
 #undef BNN
+#undef WNN
 #undef BMN
 #undef WMN
 #undef BRN
@@ -213,6 +215,7 @@ void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
 int execute(struct iapx88 *cpu)
 {
     uint8_t temp8;
+    int wait_for_bus = 0;
     printf("execute!!\n");
     //cpu->next_step = execute;
     int cycles = 0;
@@ -286,6 +289,16 @@ int execute(struct iapx88 *cpu)
         *cpu->operand_reg16 = *cpu->operand_rm16;
         cycles = 2;
         break;
+    case 0x9E: /* SAHF */
+        cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
+        cpu->flag_pf_source = cpu->flags & FLAG_PF;
+        cycles = 4;
+        break;
+    case 0x9F: /* LAHF */
+        iapx88_update_flag_pf(cpu);
+        cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
+        cycles = 4;
+        break;
     case 0xB0: /* MOV reg8, immediate */
     case 0xB1:
     case 0xB2:
@@ -306,16 +319,6 @@ int execute(struct iapx88 *cpu)
     case 0xBE:
     case 0xBF:
         *cpu->operand_reg16 = word_from_bytes(cpu->cur_inst + 1);
-        cycles = 4;
-        break;
-    case 0x9E: /* SAHF */
-        cpu->flags = (cpu->flags & 0xFF2A) | (cpu->ah & 0xD5);
-        cpu->flag_pf_source = cpu->flags & FLAG_PF;
-        cycles = 4;
-        break;
-    case 0x9F: /* LAHF */
-        iapx88_update_flag_pf(cpu);
-        cpu->ah = (cpu->ah & 0x2A) | (cpu->flags & 0xD5);
         cycles = 4;
         break;
     case 0xD0: /* shift/rotate by 1 */
@@ -342,6 +345,38 @@ int execute(struct iapx88 *cpu)
             }
             break;
         }
+        break;
+    case 0xE6: /* out immediate, al */
+        cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
+        cpu->eu_wanted_port = cpu->cur_inst[1];
+        cpu->eu_biu_byte = cpu->al;
+        cycles = 10;
+        cpu->return_reason = WAIT_BIU;
+        wait_for_bus = 1;
+        break;
+    case 0xE7: /* out immediate, ax */
+        cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
+        cpu->eu_wanted_port = cpu->cur_inst[1];
+        cpu->eu_biu_byte = cpu->ax;
+        cycles = 10;
+        cpu->return_reason = WAIT_BIU;
+        wait_for_bus = 1;
+        break;
+    case 0xEE: /* out dx, al */
+        cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
+        cpu->eu_wanted_port = cpu->dx;
+        cpu->eu_biu_byte = cpu->al;
+        cycles = 8;
+        cpu->return_reason = WAIT_BIU;
+        wait_for_bus = 1;
+        break;
+    case 0xEF: /* out dx, ax */
+        cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
+        cpu->eu_wanted_port = cpu->dx;
+        cpu->eu_biu_byte = cpu->ax;
+        cycles = 8;
+        cpu->return_reason = WAIT_BIU;
+        wait_for_bus = 1;
         break;
     case 0xEA: /* JMP direct intersegment */
         cpu->cs = word_from_bytes(cpu->cur_inst + 3);
@@ -372,6 +407,10 @@ int execute(struct iapx88 *cpu)
         return -1;
     }
 
+    if (wait_for_bus) {
+        cpu->next_step = cleanup;
+        return cycles;
+    }
     cleanup(cpu);
     return cycles;
 }

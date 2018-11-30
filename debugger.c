@@ -49,7 +49,28 @@ struct debugger *debugger_create(struct motherboard *mb)
     }
     d->disassembly_lines = 0;
     d->step = mb->step - 1;
+    d->paused = 1;
+
+    debugger_step(d);
     return d;
+}
+
+void *debugger_run(void *debugger) {
+    struct debugger *d = debugger;
+    struct motherboard *mb = d->mb;
+    mb->debug = 1;
+    while(1) {
+        if (d->paused) {
+            printf("humbug!\n");
+            pthread_mutex_lock(&mb->mutex);
+            pthread_cond_wait(&mb->condition, &mb->mutex);
+            pthread_mutex_unlock(&mb->mutex);
+        }
+        mb_run(mb);
+        debugger_step(d);
+    }
+    printf("kurt!!\n");
+    return NULL;
 }
 
 void debugger_step(struct debugger *d)
@@ -62,6 +83,7 @@ void debugger_step(struct debugger *d)
     /* } */
     d->step = d->mb->step;
     if (d->breakpoint == EA(d->cpu->cs, d->cpu->ip)) {
+        printf("FLOSK\n");
         d->paused = 1;
     }
 }
