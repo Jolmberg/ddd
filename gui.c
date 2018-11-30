@@ -35,7 +35,8 @@ int gui_init()
     mb = mb_create();
     cpu = mb->cpu;
     debugger = debugger_create(mb);
-    mb->debug = 1;
+    debugger->breakpoint = 0xfe0b0;
+    mb->debug = 0;
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
 

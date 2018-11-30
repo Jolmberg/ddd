@@ -10,7 +10,7 @@
 #include "8088.h"
 
 const uint8_t instruction_length[256] =
-{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -37,7 +37,7 @@ const uint8_t instruction_length[256] =
 #define BXR {0, MOD_XXXRM, TARGET_RM}
 
 struct instruction_desc description[256] =
-{ UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+{ UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
@@ -217,6 +217,11 @@ int execute(struct iapx88 *cpu)
     //cpu->next_step = execute;
     int cycles = 0;
     switch (cpu->cur_inst[0]) {
+    case 0x0b: /* or modregrm (to reg16) */
+        *cpu->operand_reg8 |= *cpu->operand_rm8;
+        set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
+        cycles = 3;
+        break;
     case 0x30: /* xor modregrm (from reg8) */
         *cpu->operand_rm8 ^= *cpu->operand_reg8;
         set_flags_from_bitwise8(cpu, *cpu->operand_rm8);

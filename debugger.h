@@ -20,12 +20,15 @@ struct debugger {
     struct iapx88 *cpu;
     struct registers *register_history;
     int register_history_size, register_history_start, register_history_usage;
+    int paused;
 
     int disassembly_lines;
     char *disassembly[100];
     uint32_t disassembly_addresses[100];
     int lengths[100];
     uint8_t *bytes[100];
+
+    uint32_t breakpoint;
 
     int step;
 };

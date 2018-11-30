@@ -61,4 +61,7 @@ void debugger_step(struct debugger *d)
     /* 	printf("brosk: %s\n", d->disassembly[i]); */
     /* } */
     d->step = d->mb->step;
+    if (d->breakpoint == EA(d->cpu->cs, d->cpu->ip)) {
+        d->paused = 1;
+    }
 }

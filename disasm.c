@@ -119,7 +119,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                     break;
                 }
                 format += 2;
-            } else if (!strncmp(format, "m16", 2)) {
+            } else if (!strncmp(format, "m16", 3)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
                 buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]);
                 switch (modregrm & 0xC0) {
@@ -132,19 +132,19 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
                 switch (modregrm & 0xC0) {
                 case 0xC0:
-                    buffer += sprintf(buffer, "%s, ", reg8_name[modregrm & 7]);
+                    buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]);
                     break;
                 }
-                buffer += sprintf(buffer, "%s", reg8_name[(modregrm >> 3) & 7]);
+                buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]);
                 format += 2;
-            } else if (!strncmp(format, "M16", 2)) {
+            } else if (!strncmp(format, "M16", 3)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
                 switch (modregrm & 0xC0) {
                 case 0xC0:
-                    buffer += sprintf(buffer, "%s, ", reg16_name[modregrm & 7]);
+                    buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]);
                     break;
                 }
-                buffer += sprintf(buffer, "%s", reg16_name[(modregrm >> 3) & 7]);
+                buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
                 format += 3;
             } else if (!strncmp(format, "ms", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
