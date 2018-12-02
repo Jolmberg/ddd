@@ -12,7 +12,7 @@
 const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
   1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -25,7 +25,7 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 5, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
 
 #define UGH {2, MOD_NONE, TARGET_NONE}
 #define BNN {0, MOD_NONE, TARGET_NONE}
@@ -40,7 +40,7 @@ const uint8_t instruction_length[256] =
 struct instruction_desc description[256] =
 { UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
@@ -53,7 +53,7 @@ struct instruction_desc description[256] =
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BXR, UGH, BXR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, UGH, BNN, UGH, UGH, UGH, BNN, WNN,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, UGH, UGH };
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BXR, UGH };
 
 #undef UGH
 #undef BNN
@@ -223,6 +223,15 @@ int execute(struct iapx88 *cpu)
     case 0x0b: /* or modregrm (to reg16) */
         *cpu->operand_reg8 |= *cpu->operand_rm8;
         set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
+        cycles = 3;
+        break;
+    case 0x2a: /* sub modregrm (to reg8) */
+        set_flag(cpu, FLAG_AF, ((*cpu->operand_reg8 & 0xF) < (*cpu->operand_rm8 & 0xF)));
+        temp8 = *cpu->operand_reg8 - *cpu->operand_rm8;
+        set_flag(cpu, FLAG_CF, *cpu->operand_rm8 > *cpu->operand_reg8);
+        set_flag(cpu, FLAG_OF, ((*cpu->operand_reg8 & 0x80) ^ (*cpu->operand_rm8 & 0x80)) & ((temp8 & 0x80) ^ (*cpu->operand_reg8)));
+        update_flags_pf_zf_sf_8(cpu, temp8);
+        *cpu->operand_reg8 = temp8;
         cycles = 3;
         break;
     case 0x30: /* xor modregrm (from reg8) */
@@ -402,6 +411,19 @@ int execute(struct iapx88 *cpu)
         /* 	case 0x30: */
         /* 	    cpu->reg1 = modregrm & 7; */
         /* 	} */
+    case 0xFE: /* INC, DEC, CALL, JMP, PUSH modxxxr/m */
+        switch (cpu->cur_inst[1] & 0x38) {
+        case 0x00: /* INC */
+            set_flag(cpu, FLAG_OF, *cpu->operand_rm8 & 0x80);
+            set_flag(cpu, FLAG_AF, *cpu->operand_rm8 == 0x0F);
+            (*cpu->operand_rm8)++;
+            update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
+            cycles = 3;
+            break;
+        default:
+            printf("Unhandled variant of 0x%x\n", cpu->cur_inst[0]);
+        }
+        break;
     default:
         printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]);
         return -1;
