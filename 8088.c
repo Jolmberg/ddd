@@ -12,58 +12,64 @@
 const uint8_t instruction_length[256] =
 { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
+  2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
   1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 5, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 2, 2, 1, 3, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
 
 #define UGH {2, MOD_NONE, TARGET_NONE}
 #define BNN {0, MOD_NONE, TARGET_NONE}
 #define WNN {1, MOD_NONE, TARGET_NONE}
 #define BMN {0, MOD_REGRM, TARGET_NONE}
+#define BMR {0, MOD_REGRM, TARGET_RM}
 #define WMN {1, MOD_REGRM, TARGET_NONE}
 #define BRN {0, REG_REG, TARGET_NONE}
 #define WRN {1, REG_REG, TARGET_NONE}
 #define BXN {0, MOD_XXXRM, TARGET_NONE}
 #define BXR {0, MOD_XXXRM, TARGET_RM}
+#define WSN {1, MOD_SEGRM, TARGET_NONE}
+#define WSR {1, MOD_SEGRM, TARGET_RM}
 
 struct instruction_desc description[256] =
 { UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
+  BMR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, {1, MOD_REGRM, TARGET_REG}, {1, MOD_SEGRM, TARGET_RM}, UGH, {1, MOD_SEGRM, TARGET_REG}, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSR, UGH, WSN, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BXR, UGH, BXR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, UGH, BNN, UGH, UGH, UGH, BNN, WNN,
+  UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, WNN, BNN, UGH, UGH, UGH, BNN, WNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BXR, UGH };
 
 #undef UGH
 #undef BNN
 #undef WNN
 #undef BMN
+#undef BMR
 #undef WMN
 #undef BRN
 #undef WRN
 #undef BXN
 #undef BXR
+#undef WSN
+#undef WSR
 
 int fetch(struct iapx88 *cpu);
 int decode(struct iapx88 *cpu);
@@ -187,7 +193,7 @@ void iapx88_update_flag_pf(struct iapx88 *cpu)
     set_flag(cpu, FLAG_PF, __builtin_parity(cpu->flag_pf_source)); // GCC magic
 }
 
-void update_flags_pf_zf_sf_8(struct iapx88 *cpu, uint8_t result)
+void set_flags_pf_zf_sf_8(struct iapx88 *cpu, uint8_t result)
 {
     cpu->flag_pf_source = result;
     set_flag(cpu, FLAG_ZF, !result);
@@ -225,12 +231,17 @@ int execute(struct iapx88 *cpu)
         set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
         cycles = 3;
         break;
+    case 0x20: /* and modregrm (from reg8) */
+        *cpu->operand_rm8 &= *cpu->operand_reg8;
+        set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
+        cycles = 3;
+        break;
     case 0x2a: /* sub modregrm (to reg8) */
         set_flag(cpu, FLAG_AF, ((*cpu->operand_reg8 & 0xF) < (*cpu->operand_rm8 & 0xF)));
         temp8 = *cpu->operand_reg8 - *cpu->operand_rm8;
         set_flag(cpu, FLAG_CF, *cpu->operand_rm8 > *cpu->operand_reg8);
         set_flag(cpu, FLAG_OF, ((*cpu->operand_reg8 & 0x80) ^ (*cpu->operand_rm8 & 0x80)) & ((temp8 & 0x80) ^ (*cpu->operand_reg8)));
-        update_flags_pf_zf_sf_8(cpu, temp8);
+        set_flags_pf_zf_sf_8(cpu, temp8);
         *cpu->operand_reg8 = temp8;
         cycles = 3;
         break;
@@ -254,6 +265,19 @@ int execute(struct iapx88 *cpu)
         set_flags_from_bitwise16(cpu, *cpu->operand_reg16);
         cycles = 3;
         break;
+    case 0x48: /* dec reg */
+    case 0x49:
+    case 0x4a:
+    case 0x4b:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+        set_flag(cpu, FLAG_AF, (*cpu->operand_reg8 & 0x0F) == 0);
+        set_flag(cpu, FLAG_OF, *cpu->operand_reg8 == 0x80);
+        (*cpu->operand_reg8)--;
+        set_flags_pf_zf_sf_8(cpu, *cpu->operand_reg8);
+        cycles = 3;
     case 0x70: /* branches */
         cycles = branch(cpu, cpu->flags & FLAG_OF); // JO
         break;
@@ -285,6 +309,10 @@ int execute(struct iapx88 *cpu)
     case 0x7b:
         iapx88_update_flag_pf(cpu);
         cycles = branch(cpu, !(cpu->flags & FLAG_PF)); // JNP
+        break;
+    case 0x8a: /* mov modregr/m to reg8 */
+        *cpu->operand_reg8 = *cpu->operand_rm8;
+        cycles = 2;
         break;
     case 0x8b: /* MOV modregr/m to reg16 */
         *cpu->operand_reg16 = *cpu->operand_rm16;
@@ -337,7 +365,7 @@ int execute(struct iapx88 *cpu)
             temp8 = *cpu->operand_rm8 << 1;
             set_flag(cpu, FLAG_OF, (*cpu->operand_rm8 & 0x80) ^ (temp8 & 0x80));
             *cpu->operand_rm8 = temp8;
-            update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
+            set_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
             cycles = 2;
             break;
         }
@@ -350,7 +378,7 @@ int execute(struct iapx88 *cpu)
                 *cpu->operand_rm8 >>= (cpu->cl - 1);
                 set_flag(cpu, FLAG_CF, *cpu->operand_rm8 & 1);
                 *cpu->operand_rm8 >>= 1;
-                update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
+                set_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
             }
             break;
         }
@@ -378,6 +406,11 @@ int execute(struct iapx88 *cpu)
         cycles = 8;
         cpu->return_reason = WAIT_BIU;
         wait_for_bus = 1;
+        break;
+    case 0xE9: /* jmp immediate intrasegment */
+        cpu->ip += word_from_bytes(cpu->cur_inst + 1);
+        cpu->jumped = 1;
+        cycles = 15;
         break;
     case 0xEF: /* out dx, ax */
         cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
@@ -414,10 +447,10 @@ int execute(struct iapx88 *cpu)
     case 0xFE: /* INC, DEC, CALL, JMP, PUSH modxxxr/m */
         switch (cpu->cur_inst[1] & 0x38) {
         case 0x00: /* INC */
-            set_flag(cpu, FLAG_OF, *cpu->operand_rm8 & 0x80);
-            set_flag(cpu, FLAG_AF, *cpu->operand_rm8 == 0x0F);
+            set_flag(cpu, FLAG_OF, *cpu->operand_rm8 == 0x7F);
+            set_flag(cpu, FLAG_AF, (*cpu->operand_rm8 & 0x0F) == 0x0F);
             (*cpu->operand_rm8)++;
-            update_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
+            set_flags_pf_zf_sf_8(cpu, *cpu->operand_rm8);
             cycles = 3;
             break;
         default:
