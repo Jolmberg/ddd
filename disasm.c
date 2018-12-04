@@ -54,39 +54,24 @@ const char rm_string[8][8] = { "[bx+si]", "[bx+di]", "[bp+si]", "[bp+di]",
 int sprint_modregrm_string(char *buffer, uint8_t rm, int regtype, int reg, int reverse)
 {
     char ptr[2][5] = { "BYTE", "WORD" };
-    int chars = 0;
-    char pre[] = "    ", post[] = "    ";
+    char *orgbuffer = buffer;
     int rmtype = regtype == 2 ? 1 : regtype;
-    pre[0] = '\0';
-    post[0] = '\0';
-    printf("modregrm: %x\n", rm);
-    if (reg) {
-        sprintf(reverse ? post : pre, "%s, ", reg_name[regtype][(rm >> 3) & 7]);
+    if (reg && reverse) {
+        buffer += sprintf(buffer, "%s, ", reg_name[regtype][(rm >> 3) & 7]);
     }
-    printf("modregrm: %x\n", rm);
-    /* if (reg && reverse) { */
-    /*     chars = sprintf(buffer, "%s, ", reg_name[regtype][(rm >> 3) & 7]); */
-    /* } */
     switch(rm & 0xC0) {
     case 0xC0:
-        if (reg) {
-            if (reverse) {
-                chars += sprintf(buffer, "%s, %s apa", reg_name[regtype][(rm >> 3) & 7], reg_name[rmtype][rm & 7]);
-            } else {
-                chars += sprintf(buffer, "%s, %s", reg_name[rmtype][rm & 7], reg_name[regtype][(rm >> 3) & 7]);
-            }
-        } else {
-            chars += sprintf(buffer, "%s", reg_name[rmtype][rm & 7]);
-        }
+        buffer += sprintf(buffer, "%s", reg_name[rmtype][rm & 7]);
         break;
     case 0:
-        chars += sprintf(buffer, "%s%s PTR %s%s", pre, ptr[rmtype], rm_string[rm & 7], post);
+        buffer += sprintf(buffer, "%s PTR %s", ptr[rmtype], rm_string[rm & 7]);
         break;
     }
-    /* if (reg && !reverse) { */
-    /*     chars += sprintf(buffer, ", %s", reg_name[regtype][(rm >> 3) & 7]); */
-    /* } */
-    return chars;
+    if (reg && !reverse) {
+        buffer += sprintf(buffer, ", %s", reg_name[regtype][(rm >> 3) & 7]);
+    }
+
+    return buffer - orgbuffer;
 }
 
 

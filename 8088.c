@@ -408,7 +408,7 @@ int execute(struct iapx88 *cpu)
         wait_for_bus = 1;
         break;
     case 0xE9: /* jmp immediate intrasegment */
-        cpu->ip += word_from_bytes(cpu->cur_inst + 1);
+        cpu->ip += word_from_bytes(cpu->cur_inst + 1) + 3;
         cpu->jumped = 1;
         cycles = 15;
         break;
