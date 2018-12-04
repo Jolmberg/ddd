@@ -4,6 +4,8 @@
 #include "8088.h"
 #include "motherboard.h"
 
+#define DISASM_LINE_LENGTH 40
+
 struct registers {
     union {
 	uint8_t reg8[8];

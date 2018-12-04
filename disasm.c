@@ -20,15 +20,15 @@
           Ms - modregr/m byte segregs target register */
 char instr_format[256][20] =
 {
-    "", "", "", "", "", "", "", "", "", "", "", "or $1M16", "", "", "", "",
+    "", "", "", "", "", "", "", "", "or $1m8", "or $1m16", "or $1M8", "or $1M16", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "and $1m8", "", "", "", "", "", "", "", "", "", "sub $1m8", "sub $1m16", "", "", "", "",
-    "", "", "xor $1m8", "xor $1m16", "", "", "", "", "", "", "", "", "", "", "", "",
+    "and $1m8", "and $1m16", "and $1M8", "and $1M16", "", "", "", "", "sub $1m8", "sub $1m16", "sub $1M8", "sub $1M16", "", "", "", "",
+    "xor $1m8", "xor $1m16", "xor $1M8", "xor $1M16", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "dec al", "dec cl", "dec dl", "dec bl", "dec ah", "dec ch", "dec dh", "dec bh",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "jo $1b8", "jno $1b8", "jb $1b8", "jae $1b8", "je $1b8", "jne $1b8", "", "", "js $1b8", "jns $1b8", "jp $1b8", "jnp $1b8", "", "", "", "",
-    "", "", "", "", "", "", "", "", "", "", "mov $1M8", "mov $1m16", "mov $1Ms", "", "mov $1ms", "",
+    "", "", "", "", "", "", "", "", "", "", "mov $1M8", "mov $1M16", "mov $1ms", "", "mov $1Ms", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "sahf", "lahf",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "mov al, $1i8", "mov cl, $1i8", "mov dl, $1i8", "mov bl, $1i8", "mov ah, $1i8", "mov ch, $1i8", "mov dh, $1i8", "mov bh, $1i8", "mov ax, $1i16", "mov cx, $1i16", "mov dx, $1i16", "mov bx, $1i16", "mov sp, $1i16", "mov bp, $1i16", "mov si, $1i16", "mov di, $1i16",
@@ -44,9 +44,51 @@ const char extended[2][8][5] =
     { "inc", "dec", "call", "call", "jmp", "jmp", "push", "" }
 };
 
-const char reg16_name[8][3] = { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" };
-const char reg8_name[8][3] = { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
-const char segreg_name[4][3] = { "es", "cs", "ss", "ds" };
+const char reg_name[3][8][3] = { { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" },
+                                 { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" },
+                                 { "es", "cs", "ss", "ds" } };
+
+const char rm_string[8][8] = { "[bx+si]", "[bx+di]", "[bp+si]", "[bp+di]",
+                               "[si]", "[di]", "[bp]", "[bx]" };
+
+int sprint_modregrm_string(char *buffer, uint8_t rm, int regtype, int reg, int reverse)
+{
+    char ptr[2][5] = { "BYTE", "WORD" };
+    int chars = 0;
+    char pre[] = "    ", post[] = "    ";
+    int rmtype = regtype == 2 ? 1 : regtype;
+    pre[0] = '\0';
+    post[0] = '\0';
+    printf("modregrm: %x\n", rm);
+    if (reg) {
+        sprintf(reverse ? post : pre, "%s, ", reg_name[regtype][(rm >> 3) & 7]);
+    }
+    printf("modregrm: %x\n", rm);
+    /* if (reg && reverse) { */
+    /*     chars = sprintf(buffer, "%s, ", reg_name[regtype][(rm >> 3) & 7]); */
+    /* } */
+    switch(rm & 0xC0) {
+    case 0xC0:
+        if (reg) {
+            if (reverse) {
+                chars += sprintf(buffer, "%s, %s apa", reg_name[regtype][(rm >> 3) & 7], reg_name[rmtype][rm & 7]);
+            } else {
+                chars += sprintf(buffer, "%s, %s", reg_name[rmtype][rm & 7], reg_name[regtype][(rm >> 3) & 7]);
+            }
+        } else {
+            chars += sprintf(buffer, "%s", reg_name[rmtype][rm & 7]);
+        }
+        break;
+    case 0:
+        chars += sprintf(buffer, "%s%s PTR %s%s", pre, ptr[rmtype], rm_string[rm & 7], post);
+        break;
+    }
+    /* if (reg && !reverse) { */
+    /*     chars += sprintf(buffer, ", %s", reg_name[regtype][(rm >> 3) & 7]); */
+    /* } */
+    return chars;
+}
+
 
 int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t segment, uint16_t offset) {
     int segment_override = -1;
@@ -102,73 +144,84 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
                 modxxxrm = mb_memory_peek(mb, segment, offset + operand);
-                switch(modxxxrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", reg8_name[modxxxrm & 7]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modxxxrm, 0, 0, 0);
+                /* switch(modxxxrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", reg8_name[modxxxrm & 7]); */
+                /*     break; */
+                /* } */
                 format += 2;
             } else if (!strncmp(format, "n16", 3)) {
                 modxxxrm = mb_memory_peek(mb, segment, offset + operand);
-                switch(modxxxrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", reg16_name[modxxxrm & 7]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modregrm, 1, 0, 0);
+                /* switch(modxxxrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", reg16_name[modxxxrm & 7]); */
+                /*     break; */
+                /* } */
                 format += 3;
             } else if (!strncmp(format, "m8", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modregrm, 0, 1, 0);
+                /* buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]); */
+                /* buffer += sprintf_rm_string(buffer, modregrm, 0); */
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]); */
+                /*     break; */
+                /* case 0x00: */
+                /*     buffer += sprintf(buffer, "[ */
+                /* } */
                 format += 2;
             } else if (!strncmp(format, "m16", 3)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modregrm, 1, 1, 0);
+                /* buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]); */
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]); */
+                /*     break; */
+                /* } */
                 format += 3;
             } else if (!strncmp(format, "M8", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]);
-                    break;
-                }
-                buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]);
+                buffer += sprint_modregrm_string(buffer, modregrm, 0, 1, 1);
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s, ", reg8_name[(modregrm >> 3) & 7]); */
+                /*     break; */
+                /* } */
+                /* buffer += sprintf(buffer, "%s", reg8_name[modregrm & 7]); */
                 format += 2;
             } else if (!strncmp(format, "M16", 3)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]);
-                    break;
-                }
-                buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
+                buffer += sprint_modregrm_string(buffer, modregrm, 1, 1, 1);
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s, ", reg16_name[(modregrm >> 3) & 7]); */
+                /*     break; */
+                /* } */
+                /* buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]); */
                 format += 3;
             } else if (!strncmp(format, "ms", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprintf(buffer, "%s, ", segreg_name[(modregrm >> 3) & 3]);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modregrm, 2, 1, 0);
+                /* buffer += sprintf(buffer, "%s, ", segreg_name[(modregrm >> 3) & 3]); */
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", reg16_name[modregrm & 7]); */
+                /*     break; */
+                /* } */
                 format += 2;
             } else if (!strncmp(format, "Ms", 2)) {
                 modregrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprintf(buffer, "%s, ", reg16_name[modregrm & 7]);
-                switch (modregrm & 0xC0) {
-                case 0xC0:
-                    buffer += sprintf(buffer, "%s", segreg_name[(modregrm >> 3) & 3]);
-                    break;
-                }
+                buffer += sprint_modregrm_string(buffer, modregrm, 2, 1, 1);
+                /* buffer += sprintf(buffer, "%s, ", reg16_name[modregrm & 7]); */
+                /* switch (modregrm & 0xC0) { */
+                /* case 0xC0: */
+                /*     buffer += sprintf(buffer, "%s", segreg_name[(modregrm >> 3) & 3]); */
+                /*     break; */
+                /* } */
                 format += 2;
             } else {
                 format++; // Just get us out of here!

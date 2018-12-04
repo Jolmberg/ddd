@@ -39,11 +39,11 @@ struct debugger *debugger_create(struct motherboard *mb)
     d->register_history_start = 0;
     d->register_history = (struct registers *)malloc(sizeof(struct registers) * d->register_history_size);
 
-    char *buffer = (char *)malloc(sizeof(char) * 20 * 100);
+    char *buffer = (char *)malloc(sizeof(char) * DISASM_LINE_LENGTH * 100);
     uint8_t *bytes = (uint8_t *)malloc(sizeof(uint8_t) * 7 * 100);
     for (int i = 0; i < 100; i++) {
 	d->disassembly[i] = buffer;
-	buffer += 20;
+	buffer += DISASM_LINE_LENGTH;
 	d->bytes[i] = bytes;
 	bytes +=7;
     }
@@ -61,7 +61,6 @@ void *debugger_run(void *debugger) {
     mb->debug = 1;
     while(1) {
         if (d->paused) {
-            printf("humbug!\n");
             pthread_mutex_lock(&mb->mutex);
             pthread_cond_wait(&mb->condition, &mb->mutex);
             pthread_mutex_unlock(&mb->mutex);
@@ -69,7 +68,6 @@ void *debugger_run(void *debugger) {
         mb_run(mb);
         debugger_step(d);
     }
-    printf("kurt!!\n");
     return NULL;
 }
 
