@@ -20,11 +20,11 @@ enum flags { FLAG_OF=0x800,
              FLAG_CF=0x1 };
 
 enum mod_type { MOD_NONE, MOD_REGRM, MOD_SEGRM, MOD_XXXRM, REG_REG, REG_SEG };
-enum target { TARGET_NONE, TARGET_REG, TARGET_RM, TARGET_BOTH };
+enum rm_rw { RM_READ = 1, RM_WRITE = 2, RM_BOTH = 3};
 struct instruction_desc {
     int word;
     enum mod_type mod;
-    enum target target;
+    int rm_rw; // Bit field of rm_rw enums or (for modxxxrm) index into the real rm_rw array.
 };
 
 

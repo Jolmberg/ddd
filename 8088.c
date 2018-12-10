@@ -10,7 +10,7 @@
 #include "8088.h"
 
 const uint8_t instruction_length[256] =
-{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
+{ 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
   1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -27,49 +27,61 @@ const uint8_t instruction_length[256] =
   1, 1, 1, 1, 1, 1, 2, 2, 1, 3, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
 
-#define UGH {2, MOD_NONE, TARGET_NONE}
-#define BNN {0, MOD_NONE, TARGET_NONE}
-#define WNN {1, MOD_NONE, TARGET_NONE}
-#define BMN {0, MOD_REGRM, TARGET_NONE}
-#define BMR {0, MOD_REGRM, TARGET_RM}
-#define WMN {1, MOD_REGRM, TARGET_NONE}
-#define BRN {0, REG_REG, TARGET_NONE}
-#define WRN {1, REG_REG, TARGET_NONE}
-#define BXN {0, MOD_XXXRM, TARGET_NONE}
-#define BXR {0, MOD_XXXRM, TARGET_RM}
-#define WSN {1, MOD_SEGRM, TARGET_NONE}
-#define WSR {1, MOD_SEGRM, TARGET_RM}
+#define UGH {2, MOD_NONE, 0}
+#define BNN {0, MOD_NONE, 0}
+#define WNN {1, MOD_NONE, 0}
+#define BMN {0, MOD_REGRM, 0}
+#define BMR {0, MOD_REGRM, RM_READ}
+#define BMB {0, MOD_REGRM, RM_BOTH}
+#define WMN {1, MOD_REGRM, 0}
+#define BRN {0, REG_REG, 0}
+#define WRN {1, REG_REG, 0}
+#define BXN {0, MOD_XXXRM, 0}
+#define BX0 {0, MOD_XXXRM, 0}
+#define BX1 {0, MOD_XXXRM, 1}
+#define WSN {1, MOD_SEGRM, 0}
+#define WSW {1, MOD_SEGRM, RM_WRITE}
 
 struct instruction_desc description[256] =
-{ UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
+{ UGH, UGH, BMR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  BMR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
+  BMB, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSR, UGH, WSN, UGH,
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSW, UGH, WSN, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  BXR, UGH, BXR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  BX0, UGH, BX0, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, WNN, BNN, UGH, UGH, UGH, BNN, WNN,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BXR, UGH };
+  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BX1, UGH };
 
 #undef UGH
 #undef BNN
 #undef WNN
 #undef BMN
-#undef BMR
+#undef BMB
 #undef WMN
 #undef BRN
 #undef WRN
 #undef BXN
-#undef BXR
+#undef BX0
+#undef BX1
 #undef WSN
-#undef WSR
+#undef WSW
+
+int instruction_rm_rw[6][8] = {
+    { RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, -1, RM_BOTH },
+    { RM_BOTH, RM_BOTH, RM_READ, RM_READ, RM_READ, RM_READ, RM_READ, -1 },
+    { -1, -1, -1, -1, -1, -1, -1, -1 },
+    { -1, -1, -1, -1, -1, -1, -1, -1 },
+    { -1, -1, -1, -1, -1, -1, -1, -1 },
+    { -1, -1, -1, -1, -1, -1, -1, -1 },
+};
 
 int fetch(struct iapx88 *cpu);
 int decode(struct iapx88 *cpu);
@@ -226,6 +238,8 @@ int execute(struct iapx88 *cpu)
     //cpu->next_step = execute;
     int cycles = 0;
     switch (cpu->cur_inst[0]) {
+    /* case 0x02: /\* add modregrm (to reg8) *\/ */
+    /*     break; */
     case 0x0b: /* or modregrm (to reg16) */
         *cpu->operand_reg8 |= *cpu->operand_rm8;
         set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
@@ -470,6 +484,22 @@ int execute(struct iapx88 *cpu)
     return cycles;
 }
 
+void decode_modregrm_8(struct iapx88 *cpu, struct instruction_desc *desc, int reg)
+{
+    uint8_t modregrm = cpu->cur_inst[1];
+    if (reg) {
+        int r = (cpu->cur_inst[1] >> 3) & 7;
+        cpu->operand_reg8 = cpu->reg8 + REG8INDEX(r);
+    }
+    int rm = cpu->cur_inst[1] & 7;
+    switch (cpu->cur_inst[1] & 0xC0) {
+    case 0xC0: cpu->operand_rm8 = cpu->reg8 + REG8INDEX(rm); break;
+    case 0:
+        cpu->eu_wanted_segment = (cpu->segment_override >= 0) ? cpu->segreg[cpu->segment_override] : cpu->ds;
+        cpu->eu_wanted_offset = cpu->bx;
+    }
+}
+
 int decode(struct iapx88 *cpu)
 {
     printf("decode!!!!\n");
@@ -482,6 +512,7 @@ int decode(struct iapx88 *cpu)
     cpu->return_reason = NO_REASON;
     switch (desc->mod) {
     case MOD_REGRM:
+        decode_modregrm_8(cpu, desc, 1);
         reg = (cpu->cur_inst[1] >> 3) & 7;
         if (desc->word) {
             cpu->operand_reg16 = cpu->reg16 + reg;
@@ -489,7 +520,7 @@ int decode(struct iapx88 *cpu)
             cpu->operand_reg8 = cpu->reg8 + REG8INDEX(reg);
         }
         rm = cpu->cur_inst[1] & 7;
-        switch (cpu->cur_inst[1] & 0xC0){
+        switch (cpu->cur_inst[1] & 0xC0) {
         case 0xC0:
             if (desc->word) {
                 cpu->operand_rm16 = cpu->reg16 + rm;
@@ -531,33 +562,6 @@ int decode(struct iapx88 *cpu)
         break;
     default:
         printf("Unhandled mod type\n");
-        break;
-    }
-    switch (desc->target) {
-    case TARGET_REG:
-        if(desc->word) {
-            cpu->target16 = cpu->operand_reg16;
-        } else {
-            cpu->target8 = cpu->operand_reg8;
-        }
-        break;
-    case TARGET_RM:
-        if (desc->word) {
-            cpu->target16 = cpu->operand_rm16;
-        } else {
-            cpu->target8 = cpu->operand_rm8;
-        }
-        break;
-    case TARGET_BOTH:
-        if (desc->word) {
-            cpu->target16 = cpu->operand_reg16;
-            cpu->target16_2 = cpu->operand_rm16;
-        } else {
-            cpu->target8 = cpu->operand_reg8;
-            cpu->target8_2 = cpu->operand_rm8;
-        }
-        break;
-    default:
         break;
     }
     return execute(cpu);
