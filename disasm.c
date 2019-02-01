@@ -24,7 +24,7 @@ char instr_format[256][20] =
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "and $1m8", "and $1m16", "and $1M8", "and $1M16", "", "", "", "", "sub $1m8", "sub $1m16", "sub $1M8", "sub $1M16", "", "", "", "",
     "xor $1m8", "xor $1m16", "xor $1M8", "xor $1M16", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "", "", "", "", "", "dec al", "dec cl", "dec dl", "dec bl", "dec ah", "dec ch", "dec dh", "dec bh",
+    "inc ax", "inc cx", "inc dx", "inc bx", "inc sp", "inc bp", "inc si", "inc di", "dec ax", "dec cx", "dec dx", "dec bx", "dec sp", "dec bp", "dec si", "dec di",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
     "jo $1b8", "jno $1b8", "jb $1b8", "jae $1b8", "je $1b8", "jne $1b8", "", "", "js $1b8", "jns $1b8", "jp $1b8", "jnp $1b8", "", "", "", "",

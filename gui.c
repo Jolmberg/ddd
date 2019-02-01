@@ -21,7 +21,7 @@ int gui_init()
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
         return 3;
     }
-    window = SDL_CreateWindow("Flork", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    window = SDL_CreateWindow("Flork", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 720, 480, 0);
     if (!window) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
         return 3;
@@ -182,7 +182,7 @@ int gui_loop()
     SDL_Event event;
     SDL_Rect screen_rect = { 0, 0, 320, 240};
     SDL_Rect rect_regview = { 320, 240, 320, 240};
-    SDL_Rect rect_disassembly = { 320, 0, 320, 240};
+    SDL_Rect rect_disassembly = { 320, 0, 400, 240};
     pthread_t emulator;
     int last_debugger_step = -2;
     int tret = pthread_create(&emulator, NULL, debugger_run, (void *)debugger);
@@ -194,7 +194,7 @@ int gui_loop()
     tex_screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
     tex_regview_bg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
     tex_regview_fg = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
-    tex_disassembly = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 320, 240);
+    tex_disassembly = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 400, 240);
     if (!tex_screen || !tex_regview_bg || !tex_regview_fg) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s", SDL_GetError());
         return 3;

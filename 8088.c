@@ -47,7 +47,7 @@ struct instruction_desc description[256] =
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BMB, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN,
+  WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
@@ -212,6 +212,13 @@ void set_flags_pf_zf_sf_8(struct iapx88 *cpu, uint8_t result)
     set_flag(cpu, FLAG_SF, result & 0x80);
 }
 
+void set_flags_pf_zf_sf_16(struct iapx88 *cpu, uint16_t result)
+{
+    cpu->flag_pf_source = result;
+    set_flag(cpu, FLAG_ZF, !result);
+    set_flag(cpu, FLAG_SF, result & 0x8000);
+}
+
 void set_flags_from_bitwise8(struct iapx88 *cpu, uint8_t result)
 {
     set_flag(cpu, FLAG_CF, 0);
@@ -238,8 +245,15 @@ int execute(struct iapx88 *cpu)
     //cpu->next_step = execute;
     int cycles = 0;
     switch (cpu->cur_inst[0]) {
-    /* case 0x02: /\* add modregrm (to reg8) *\/ */
-    /*     break; */
+     case 0x02: /* add modregrm (to reg8) */
+         set_flag(cpu, FLAG_AF, (*cpu->operand_reg8 & 0xF) + (*cpu->operand_rm8 &0xF) > 0xF);
+         temp8 = *cpu->operand_reg8 + *cpu->operand_rm8;
+         set_flag(cpu, FLAG_CF, *cpu->operand_reg8 + *cpu->operand_rm8 > 0xFF);
+         set_flag(cpu, FLAG_OF, ((*cpu->operand_reg8 & 0x80) == (*cpu->operand_rm8 & 0x80)) && ((*cpu->operand_reg8 & 0x80) != (temp8 & 0x80)));
+         set_flags_pf_zf_sf_8(cpu, temp8);
+         *cpu->operand_reg8 = temp8;
+         cycles = 3;
+         break;
     case 0x0b: /* or modregrm (to reg16) */
         *cpu->operand_reg8 |= *cpu->operand_rm8;
         set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
@@ -279,7 +293,21 @@ int execute(struct iapx88 *cpu)
         set_flags_from_bitwise16(cpu, *cpu->operand_reg16);
         cycles = 3;
         break;
-    case 0x48: /* dec reg */
+    case 0x40: /* inc reg16 */
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+        set_flag(cpu, FLAG_AF, *cpu->operand_reg16 == 0x000F);
+        set_flag(cpu, FLAG_OF, *cpu->operand_reg16 == 0x7FFF);
+        (*cpu->operand_reg16)++;
+        set_flags_pf_zf_sf_16(cpu, *cpu->operand_reg16);
+        cycles = 2;
+        break;
+    case 0x48: /* dec reg16 */
     case 0x49:
     case 0x4a:
     case 0x4b:
@@ -287,11 +315,12 @@ int execute(struct iapx88 *cpu)
     case 0x4d:
     case 0x4e:
     case 0x4f:
-        set_flag(cpu, FLAG_AF, (*cpu->operand_reg8 & 0x0F) == 0);
-        set_flag(cpu, FLAG_OF, *cpu->operand_reg8 == 0x80);
-        (*cpu->operand_reg8)--;
-        set_flags_pf_zf_sf_8(cpu, *cpu->operand_reg8);
-        cycles = 3;
+        set_flag(cpu, FLAG_AF, (*cpu->operand_reg16 & 0x000F) == 0);
+        set_flag(cpu, FLAG_OF, *cpu->operand_reg16 == 0x8000);
+        (*cpu->operand_reg16)--;
+        set_flags_pf_zf_sf_16(cpu, *cpu->operand_reg16);
+        cycles = 2;
+        break;
     case 0x70: /* branches */
         cycles = branch(cpu, cpu->flags & FLAG_OF); // JO
         break;
@@ -484,20 +513,43 @@ int execute(struct iapx88 *cpu)
     return cycles;
 }
 
-void decode_modregrm_8(struct iapx88 *cpu, struct instruction_desc *desc, int reg)
+// Should probably return the number of cycles used by address calculation
+int decode_modregrm_8(struct iapx88 *cpu, struct instruction_desc *desc, int reg)
 {
     uint8_t modregrm = cpu->cur_inst[1];
     if (reg) {
-        int r = (cpu->cur_inst[1] >> 3) & 7;
+        int r = (modregrm >> 3) & 7;
         cpu->operand_reg8 = cpu->reg8 + REG8INDEX(r);
     }
-    int rm = cpu->cur_inst[1] & 7;
-    switch (cpu->cur_inst[1] & 0xC0) {
+    int rm = modregrm & 7;
+
+    switch (modregrm & 0xC0) {
     case 0xC0: cpu->operand_rm8 = cpu->reg8 + REG8INDEX(rm); break;
     case 0:
         cpu->eu_wanted_segment = (cpu->segment_override >= 0) ? cpu->segreg[cpu->segment_override] : cpu->ds;
         cpu->eu_wanted_offset = cpu->bx;
+        cpu->operand_rm8 = &cpu->eu_biu_byte;
+        return 1;
     }
+    return 0;
+}
+
+int decode_modregrm_16(struct iapx88 *cpu, struct instruction_desc *desc, uint16_t *regset)
+{
+    uint8_t modregrm = cpu->cur_inst[1];
+    if (regset) {
+        int r = (modregrm >> 3) & 7;
+        cpu->operand_reg16 = cpu->reg16 + r;
+    }
+    int rm = modregrm & 7;
+    switch (modregrm & 0xC0) {
+    case 0xC0: cpu->operand_rm16 = cpu->reg16 + rm; break;
+    case 0:
+        cpu->eu_wanted_segment = (cpu->segment_override >= 0) ? cpu->segreg[cpu->segment_override] : cpu->ds;
+        cpu->eu_wanted_offset = cpu->bx;
+        return 1;
+    }
+    return 0;
 }
 
 int decode(struct iapx88 *cpu)
@@ -509,25 +561,15 @@ int decode(struct iapx88 *cpu)
         printf("Unimplemented opcode! 0x%x\n", cpu->cur_inst[0]);
         return -1;
     }
+    int need_mem_read = 0;
     cpu->return_reason = NO_REASON;
     switch (desc->mod) {
     case MOD_REGRM:
-        decode_modregrm_8(cpu, desc, 1);
-        reg = (cpu->cur_inst[1] >> 3) & 7;
+        printf("KUVOESSSSSS!\n");
         if (desc->word) {
-            cpu->operand_reg16 = cpu->reg16 + reg;
+            need_mem_read = decode_modregrm_16(cpu, desc, cpu->reg16);
         } else {
-            cpu->operand_reg8 = cpu->reg8 + REG8INDEX(reg);
-        }
-        rm = cpu->cur_inst[1] & 7;
-        switch (cpu->cur_inst[1] & 0xC0) {
-        case 0xC0:
-            if (desc->word) {
-                cpu->operand_rm16 = cpu->reg16 + rm;
-            } else {
-                cpu->operand_rm8 = cpu->reg8 + REG8INDEX(rm);
-            }
-            break;
+            need_mem_read = decode_modregrm_8(cpu, desc, 1);
         }
         break;
     case MOD_SEGRM:
@@ -563,6 +605,11 @@ int decode(struct iapx88 *cpu)
     default:
         printf("Unhandled mod type\n");
         break;
+    }
+    if (need_mem_read) {
+        cpu->return_reason = WAIT_BIU;
+        cpu->next_step = execute;
+        return 0;
     }
     return execute(cpu);
     //cpu->next_step = execute;
