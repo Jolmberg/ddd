@@ -54,6 +54,7 @@ struct iapx88 {
 
     enum return_reason return_reason;
     enum control_bus_state eu_wanted_control_bus_state;
+    //int eu_wanted_bytes;
     uint16_t eu_wanted_segment, eu_wanted_offset, eu_wanted_port;
     uint8_t eu_biu_byte;
     

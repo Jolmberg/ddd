@@ -10,21 +10,21 @@
 #include "8088.h"
 
 const uint8_t instruction_length[256] =
-{ 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
+{ 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
+  2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1,
   1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1,
+  3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 2, 2, 1, 3, 5, 1, 1, 1, 1, 1,
+  1, 1, 2, 1, 1, 1, 2, 2, 1, 3, 5, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
 
 #define UGH {2, MOD_NONE, 0}
@@ -34,6 +34,7 @@ const uint8_t instruction_length[256] =
 #define BMR {0, MOD_REGRM, RM_READ}
 #define BMB {0, MOD_REGRM, RM_BOTH}
 #define WMN {1, MOD_REGRM, 0}
+#define WMR {1, MOD_REGRM, RM_READ}
 #define BRN {0, REG_REG, 0}
 #define WRN {1, REG_REG, 0}
 #define BXN {0, MOD_XXXRM, 0}
@@ -43,29 +44,31 @@ const uint8_t instruction_length[256] =
 #define WSW {1, MOD_SEGRM, RM_WRITE}
 
 struct instruction_desc description[256] =
-{ UGH, UGH, BMR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, WMN, UGH, UGH, UGH, UGH,
+{ UGH, UGH, BMR, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMR, WMR, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  BMB, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, UGH, UGH, UGH, UGH, UGH,
+  BMB, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMR, UGH, UGH, UGH, UGH,
   UGH, UGH, BMN, WMN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSW, UGH, WSN, UGH,
+  UGH /* flork */, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSW, UGH, WSN, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
+  UGH, UGH, UGH, BNN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BX0, UGH, BX0, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, UGH, UGH, UGH, UGH, BNN, WNN, UGH, WNN, BNN, UGH, UGH, UGH, BNN, WNN,
+  UGH, UGH, BNN, UGH, BNN, UGH, BNN, WNN, UGH, WNN, BNN, UGH, UGH, UGH, BNN, WNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BX1, UGH };
 
 #undef UGH
 #undef BNN
 #undef WNN
 #undef BMN
+#undef BMR
 #undef BMB
 #undef WMN
+#undef WMR
 #undef BRN
 #undef WRN
 #undef BXN
@@ -237,9 +240,33 @@ void set_flags_from_bitwise16(struct iapx88 *cpu, uint16_t result)
     set_flag(cpu, FLAG_OF, 0);
 }
 
+void eu_request_memread(struct iapx88 *cpu, uint16_t segment, uint16_t offset)
+{
+    cpu->eu_wanted_segment = segment;
+    cpu->eu_wanted_offset = offset;
+    cpu->eu_wanted_control_bus_state = BUS_MEMREAD;
+}
+
+int inst_ret_intra2(struct iapx88 *cpu)
+{
+    cpu->ip |= (cpu->eu_biu_byte << 8);
+    cpu->jumped = 1;
+    cleanup(cpu);
+    return 8;
+}
+
+int inst_ret_intra1(struct iapx88 *cpu)
+{
+    cpu->ip = cpu->eu_biu_byte;
+    cpu->eu_wanted_offset++;
+    cpu->next_step = inst_ret_intra2;
+    return 0;
+}
+
 int execute(struct iapx88 *cpu)
 {
     uint8_t temp8;
+    uint16_t temp16;
     int wait_for_bus = 0;
     printf("execute!!\n");
     //cpu->next_step = execute;
@@ -254,9 +281,14 @@ int execute(struct iapx88 *cpu)
          *cpu->operand_reg8 = temp8;
          cycles = 3;
          break;
-    case 0x0b: /* or modregrm (to reg16) */
+    case 0x0a: /* or modregrm (to reg8) */
         *cpu->operand_reg8 |= *cpu->operand_rm8;
-        set_flags_from_bitwise8(cpu, *cpu->operand_rm8);
+        set_flags_from_bitwise8(cpu, *cpu->operand_reg8);
+        cycles = 3;
+        break;
+    case 0x0b: /* or modregrm (to reg16) */
+        *cpu->operand_reg16 |= *cpu->operand_rm16;
+        set_flags_from_bitwise16(cpu, *cpu->operand_reg16);
         cycles = 3;
         break;
     case 0x20: /* and modregrm (from reg8) */
@@ -271,6 +303,15 @@ int execute(struct iapx88 *cpu)
         set_flag(cpu, FLAG_OF, ((*cpu->operand_reg8 & 0x80) ^ (*cpu->operand_rm8 & 0x80)) & ((temp8 & 0x80) ^ (*cpu->operand_reg8)));
         set_flags_pf_zf_sf_8(cpu, temp8);
         *cpu->operand_reg8 = temp8;
+        cycles = 3;
+        break;
+    case 0x2b: /* sub modregrm (to reg16) */
+        set_flag(cpu, FLAG_AF, ((*cpu->operand_reg16 & 0xF) < (*cpu->operand_rm16 & 0xF)));
+        temp16 = *cpu->operand_reg16 - *cpu->operand_rm16;
+        set_flag(cpu, FLAG_CF, *cpu->operand_rm16 > *cpu->operand_reg16);
+        set_flag(cpu, FLAG_OF, ((*cpu->operand_reg16 & 0x8000) ^ (*cpu->operand_rm16 & 0x8000)) & ((temp16 & 0x8000) ^ (*cpu->operand_reg16)));
+        set_flags_pf_zf_sf_16(cpu, temp16);
+        *cpu->operand_reg16 = temp16;
         cycles = 3;
         break;
     case 0x30: /* xor modregrm (from reg8) */
@@ -401,6 +442,11 @@ int execute(struct iapx88 *cpu)
         *cpu->operand_reg16 = word_from_bytes(cpu->cur_inst + 1);
         cycles = 4;
         break;
+    case 0xC3: /* ret intrasegment */
+        eu_request_memread(cpu, cpu->ss, cpu->sp);
+        cpu->next_step = inst_ret_intra1;
+        cpu->return_reason = WAIT_BIU;
+        return 0;
     case 0xD0: /* shift/rotate by 1 */
         switch(cpu->cur_inst[1] & 0x38) {
         case 0x20: /* SHL modxxxrm, 1 */
@@ -425,6 +471,17 @@ int execute(struct iapx88 *cpu)
             }
             break;
         }
+        break;
+    case 0xE2: /* loop immediate */
+        cpu->cx--;
+        cycles = 1 + branch(cpu, cpu->cx != 0);
+        break;
+    case 0xE4: /* in al, immediate */
+        cpu->eu_wanted_control_bus_state = BUS_IOREAD;
+        cpu->eu_wanted_port = cpu->cur_inst[1];
+        cycles = 10;
+        cpu->return_reason = WAIT_BIU;
+        wait_for_bus = 1;
         break;
     case 0xE6: /* out immediate, al */
         cpu->eu_wanted_control_bus_state = BUS_IOWRITE;
