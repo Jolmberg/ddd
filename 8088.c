@@ -123,12 +123,12 @@ void iapx88_reset(struct iapx88 *cpu)
 void check_segment_override(struct iapx88 *cpu, uint8_t b)
 {
     if ((cpu->cur_inst_read == 0) && IS_SEGMENT_OVERRIDE(b)) {
-	cpu->segment_override = (b >> 3) & 3;
+        cpu->segment_override = (b >> 3) & 3;
     } else {
-	cpu->cur_inst[cpu->cur_inst_read++] = b;
-	if (cpu->cur_inst_read == 1) {
-	    cpu->cur_inst_len = instruction_length[b];
-	}
+        cpu->cur_inst[cpu->cur_inst_read++] = b;
+        if (cpu->cur_inst_read == 1) {
+            cpu->cur_inst_len = instruction_length[b];
+        }
     }
 }
 
@@ -172,7 +172,7 @@ int cleanup(struct iapx88 *cpu)
         cpu->prefetch_forbidden = 1;
         cpu->jumped = 0;
     } else {
-	cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
+        cpu->ip += cpu->cur_inst_len + (cpu->segment_override >= 0);
     }
     cpu->cur_inst_len = 99;
     cpu->cur_inst_read = 0;
@@ -539,11 +539,11 @@ int execute(struct iapx88 *cpu)
         cycles = 2;
         break;
         /* case 0xFF: /\* PUSH, CALL, JMP, INC, DEC modxxxr/m *\/ */
-        /* 	modregrm = cpu->cur_inst[1]; */
-        /* 	switch (modregrm & 0x38) { */
-        /* 	case 0x30: */
-        /* 	    cpu->reg1 = modregrm & 7; */
-        /* 	} */
+        /*         modregrm = cpu->cur_inst[1]; */
+        /*         switch (modregrm & 0x38) { */
+        /*         case 0x30: */
+        /*             cpu->reg1 = modregrm & 7; */
+        /*         } */
     case 0xFE: /* INC, DEC, CALL, JMP, PUSH modxxxr/m */
         switch (cpu->cur_inst[1] & 0x38) {
         case 0x00: /* INC */
@@ -708,7 +708,7 @@ int iapx88_step(struct iapx88 *cpu)
     /*     case CPU_FETCH: */
     /*     case CPU_DECODE: */
     /*         if (cpu->cur_inst_len == 0) { */
-    /*     	return -1; */
+    /*             return -1; */
     /*         } */
     /*         switch (cpu->cur_inst[0]) { */
     /*         case 0x32: /\* xor modregrm (to reg8)*\/ */
@@ -791,7 +791,7 @@ int iapx88_step(struct iapx88 *cpu)
     /*         case 0xB5: */
     /*         case 0xB6: */
     /*         case 0xB7: */
-    /*     	cpu->reg1 = REG8INDEX(cpu->cur_inst[0] & 7); */
+    /*             cpu->reg1 = REG8INDEX(cpu->cur_inst[0] & 7); */
     /*             cpu->reg8[cpu->reg1] = cpu->cur_inst[1]; */
     /*             cleanup(cpu, 0); */
     /*             return 4; */
@@ -818,49 +818,49 @@ int iapx88_step(struct iapx88 *cpu)
     /*             cleanup(cpu, 0); */
     /*             return 4; */
     /*         case 0xD0: /\* shift/rotate by 1 *\/ */
-    /*     	modregrm = cpu->cur_inst[1]; */
-    /*     	switch(modregrm & 0x38) { */
-    /*     	case 0x20: /\* SHL modxxxrm, 1 *\/ */
-    /*     	    switch(modregrm & 0xC0) { */
-    /*     	    case 0xC0: */
-    /*     		reg1 = REG8INDEX(modregrm & 7); */
-    /*     		temp8 = cpu->reg8[reg1] << 1; */
-    /*     		set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80)); */
-    /*     		set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80)); */
-    /*     		cpu->reg8[reg1] = temp8; */
-    /*     		cleanup(cpu, 0); */
-    /*     		return 2; */
-    /*     		break; */
-    /*     	    } */
-    /*     	    break; */
-    /*     	} */
-    /*     	break; */
+    /*             modregrm = cpu->cur_inst[1]; */
+    /*             switch(modregrm & 0x38) { */
+    /*             case 0x20: /\* SHL modxxxrm, 1 *\/ */
+    /*                 switch(modregrm & 0xC0) { */
+    /*                 case 0xC0: */
+    /*                     reg1 = REG8INDEX(modregrm & 7); */
+    /*                     temp8 = cpu->reg8[reg1] << 1; */
+    /*                     set_flag(cpu, FLAG_OF, (cpu->reg8[reg1] & 0x80) ^ (temp8 & 0x80)); */
+    /*                     set_flag(cpu, FLAG_CF, (cpu->reg8[reg1] & 0x80)); */
+    /*                     cpu->reg8[reg1] = temp8; */
+    /*                     cleanup(cpu, 0); */
+    /*                     return 2; */
+    /*                     break; */
+    /*                 } */
+    /*                 break; */
+    /*             } */
+    /*             break; */
     /*         case 0xD2: /\* shift/rotate by cl *\/ */
-    /*     	modregrm = cpu->cur_inst[1]; */
-    /*     	switch(cpu->cur_inst[1] & 0x38) { */
-    /*     	case 0x28: /\* SHR modxxxrm, cl *\/ */
-    /*     	    switch(modregrm & 0xC0) { */
-    /*     	    case 0xC0: */
-    /*     		reg1 = REG8INDEX(modregrm & 7); */
-    /*     		if (cpu->cl > 0) { */
-    /*     		    cpu->reg8[reg1] >>= (cpu->cl - 1); */
-    /*     		    set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1); */
-    /*     		    cpu->reg8[reg1] >>=1; */
-    /*     		} */
-    /*     		cleanup(cpu, 0); */
-    /*     		return 8 + 4 * cpu->cl; */
-    /*     		break; */
-    /*     	    } */
-    /*     	    break; */
-    /*     	} */
-    /*     	break; */
+    /*             modregrm = cpu->cur_inst[1]; */
+    /*             switch(cpu->cur_inst[1] & 0x38) { */
+    /*             case 0x28: /\* SHR modxxxrm, cl *\/ */
+    /*                 switch(modregrm & 0xC0) { */
+    /*                 case 0xC0: */
+    /*                     reg1 = REG8INDEX(modregrm & 7); */
+    /*                     if (cpu->cl > 0) { */
+    /*                         cpu->reg8[reg1] >>= (cpu->cl - 1); */
+    /*                         set_flag(cpu, FLAG_CF, cpu->reg8[reg1] & 1); */
+    /*                         cpu->reg8[reg1] >>=1; */
+    /*                     } */
+    /*                     cleanup(cpu, 0); */
+    /*                     return 8 + 4 * cpu->cl; */
+    /*                     break; */
+    /*                 } */
+    /*                 break; */
+    /*             } */
+    /*             break; */
     /*         case 0xEA: /\* JMP direct intersegment *\/ */
-    /*     	word1 = word_from_bytes(cpu->cur_inst + 1); */
-    /*     	word2 = word_from_bytes(cpu->cur_inst + 3); */
-    /*     	cpu->cs = word2; */
-    /*     	cpu->ip = word1; */
-    /*     	cleanup(cpu, 1); */
-    /*     	return 15; */
+    /*             word1 = word_from_bytes(cpu->cur_inst + 1); */
+    /*             word2 = word_from_bytes(cpu->cur_inst + 3); */
+    /*             cpu->cs = word2; */
+    /*             cpu->ip = word1; */
+    /*             cleanup(cpu, 1); */
+    /*             return 15; */
     /*         case 0xF8: /\* CLC *\/ */
     /*             set_flag(cpu, FLAG_CF, 0); */
     /*             cleanup(cpu, 0); */
@@ -871,17 +871,17 @@ int iapx88_step(struct iapx88 *cpu)
     /*             return 2; */
     /*         case 0xFA: /\* CLI *\/ */
     /*             set_flag(cpu, FLAG_IF, 0); */
-    /*     	cleanup(cpu, 0); */
-    /*     	return 2; */
+    /*             cleanup(cpu, 0); */
+    /*             return 2; */
     /*         /\* case 0xFF: /\\* PUSH, CALL, JMP, INC, DEC modxxxr/m *\\/ *\/ */
-    /*         /\* 	modregrm = cpu->cur_inst[1]; *\/ */
-    /*         /\* 	switch (modregrm & 0x38) { *\/ */
-    /*         /\* 	case 0x30: *\/ */
-    /*         /\* 	    cpu->reg1 = modregrm & 7; *\/ */
-    /*         /\* 	} *\/ */
+    /*         /\*         modregrm = cpu->cur_inst[1]; *\/ */
+    /*         /\*         switch (modregrm & 0x38) { *\/ */
+    /*         /\*         case 0x30: *\/ */
+    /*         /\*             cpu->reg1 = modregrm & 7; *\/ */
+    /*         /\*         } *\/ */
     /*         default: */
-    /*     	printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]); */
-    /*     	return -1; */
+    /*             printf("Unknown opcode: 0x%X\n", cpu->cur_inst[0]); */
+    /*             return -1; */
     /*         } */
     /*     } */
     /* } */
@@ -893,37 +893,37 @@ int iapx88_step(struct iapx88 *cpu)
 /*     switch (cpu->control_bus_state) { */
 /*     case BUS_FETCH: */
 /*     case BUS_MEMREAD: */
-/* 	switch (cpu->bus_state) { */
-/* 	case BUS_T3: */
-/* 	    cpu->data_pins = read_memory(cpu->address_pins); // blah */
+/*         switch (cpu->bus_state) { */
+/*         case BUS_T3: */
+/*             cpu->data_pins = read_memory(cpu->address_pins); // blah */
 /* } */
 
 int biu_request_prefetch(struct iapx88 *cpu, int max_cycles)
 {
     if (cpu->prefetch_usage == 4) {
-	return max_cycles;
+        return max_cycles;
     }
     switch (cpu->bus_state) {
     case BUS_IDLE:
-	cpu->control_bus_state = BUS_FETCH;
-	cpu->bus_state = BUS_T3;
-	cpu->address_pins = EA(cpu->cs, cpu->prefetch_ip++);
-	return 3;
+        cpu->control_bus_state = BUS_FETCH;
+        cpu->bus_state = BUS_T3;
+        cpu->address_pins = EA(cpu->cs, cpu->prefetch_ip++);
+        return 3;
     case BUS_T1:
-	cpu->bus_state = BUS_T3;
-	return 2;
+        cpu->bus_state = BUS_T3;
+        return 2;
     case BUS_T2:
-	cpu->bus_state = BUS_T3;
-	return 1;
+        cpu->bus_state = BUS_T3;
+        return 1;
     case BUS_T3:
-	return 0;
+        return 0;
     case BUS_T4:
-	cpu->eu_biu_byte = cpu->data_pins;
-	cpu->bus_state = BUS_IDLE;
-	cpu->control_bus_state = BUS_NONE;
-	return 1;
+        cpu->eu_biu_byte = cpu->data_pins;
+        cpu->bus_state = BUS_IDLE;
+        cpu->control_bus_state = BUS_NONE;
+        return 1;
     case BUS_TW:
-	return 1;
+        return 1;
     }
 }
 
@@ -942,7 +942,7 @@ int biu_make_request(struct iapx88 *cpu)
     cpu->control_bus_state = cpu->eu_wanted_control_bus_state;
     cpu->address_pins = EA(cpu->eu_wanted_segment, cpu->eu_wanted_offset);
     if (cpu->control_bus_state == BUS_MEMWRITE) {
-	cpu->data_pins = cpu->eu_biu_byte;
+        cpu->data_pins = cpu->eu_biu_byte;
     }
     cpu->bus_state = BUS_T3;
     return 3;
@@ -951,7 +951,7 @@ int biu_make_request(struct iapx88 *cpu)
 int biu_handle_response(struct iapx88 *cpu)
 {
     if (cpu->control_bus_state == BUS_FETCH || cpu->control_bus_state == BUS_MEMREAD) {
-	cpu->eu_biu_byte = cpu->data_pins;
+        cpu->eu_biu_byte = cpu->data_pins;
     }
     cpu->control_bus_state = BUS_NONE;
     cpu->bus_state = BUS_IDLE;

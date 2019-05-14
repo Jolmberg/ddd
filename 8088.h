@@ -31,11 +31,11 @@ struct instruction_desc {
 struct iapx88 {
     // Registers
     union {
-	uint8_t reg8[8];
-	struct { uint8_t al, ah, cl, ch, dl, dh, bl, bh; };
-	uint16_t reg16[12];
+        uint8_t reg8[8];
+        struct { uint8_t al, ah, cl, ch, dl, dh, bl, bh; };
+        uint16_t reg16[12];
         struct { uint16_t dummy[8], segreg[4]; };
-	struct { uint16_t ax, cx, dx, bx, sp, bp, si, di, es, cs, ss, ds; };
+        struct { uint16_t ax, cx, dx, bx, sp, bp, si, di, es, cs, ss, ds; };
     };
     uint16_t ip, flags;
     uint16_t flag_pf_source; // Calculate parity flag from this when needed

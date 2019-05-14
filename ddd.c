@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 {
 
     if (gui_init() != 0) {
-	printf("Disaster!\n");
+        printf("Disaster!\n");
     }
     
     gui_loop();

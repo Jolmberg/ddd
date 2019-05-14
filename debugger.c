@@ -15,9 +15,9 @@ void debugger_copy_cpu_regs(struct debugger *d)
     struct iapx88 *cpu = d->cpu;
     int index = (d->register_history_start + d->register_history_usage) % d->register_history_size;
     if (d->register_history_usage == d->register_history_size) {
-	d->register_history_start = (d->register_history_start + 1) % d->register_history_size;
+        d->register_history_start = (d->register_history_start + 1) % d->register_history_size;
     } else {
-	d->register_history_usage++;
+        d->register_history_usage++;
     }
     struct registers *regs = d->register_history + index;
     memcpy(regs, cpu, sizeof(struct registers));
@@ -42,10 +42,10 @@ struct debugger *debugger_create(struct motherboard *mb)
     char *buffer = (char *)malloc(sizeof(char) * DISASM_LINE_LENGTH * 100);
     uint8_t *bytes = (uint8_t *)malloc(sizeof(uint8_t) * 7 * 100);
     for (int i = 0; i < 100; i++) {
-	d->disassembly[i] = buffer;
-	buffer += DISASM_LINE_LENGTH;
-	d->bytes[i] = bytes;
-	bytes +=7;
+        d->disassembly[i] = buffer;
+        buffer += DISASM_LINE_LENGTH;
+        d->bytes[i] = bytes;
+        bytes +=7;
     }
     d->disassembly_lines = 0;
     d->step = mb->step - 1;
@@ -77,7 +77,7 @@ void debugger_step(struct debugger *d)
     debugger_copy_cpu_regs(d);
     d->disassembly_lines = disassemble_from_address(d->disassembly, d->disassembly_addresses, d->lengths, d->bytes, d->mb, d->cpu->cs, d->cpu->ip, 100);
     /* for (int i = 0; i < 10; i++) { */
-    /* 	printf("brosk: %s\n", d->disassembly[i]); */
+    /*         printf("brosk: %s\n", d->disassembly[i]); */
     /* } */
     d->step = d->mb->step;
     if (d->breakpoint == EA(d->cpu->cs, d->cpu->ip)) {

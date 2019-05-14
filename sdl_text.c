@@ -25,19 +25,19 @@ int vsdlprintf(SDL_Renderer *renderer, int x, int y, struct colour *fg, struct c
     int i = 0;
     SDL_SetTextureColorMod(asciialpha, fg->r, fg->g, fg->b);
     if (bg) {
-	SDL_SetRenderDrawColor(renderer, bg->r, bg->g, bg->b, bg->a);
+        SDL_SetRenderDrawColor(renderer, bg->r, bg->g, bg->b, bg->a);
     }
     while (*b) {
-	int sx = *b & 31;
-	int sy = *b >> 5;
-	SDL_Rect srcrect = { sx*9, sy*16, 9, 16 };
-	SDL_Rect dstrect = { x + i*9, y, 9, 16 };
-	if (bg) {
-	    SDL_RenderFillRect(renderer, &dstrect);
-	}
-	SDL_RenderCopy(renderer, asciialpha, &srcrect, &dstrect);
-	b++;
-	i++;
+        int sx = *b & 31;
+        int sy = *b >> 5;
+        SDL_Rect srcrect = { sx*9, sy*16, 9, 16 };
+        SDL_Rect dstrect = { x + i*9, y, 9, 16 };
+        if (bg) {
+            SDL_RenderFillRect(renderer, &dstrect);
+        }
+        SDL_RenderCopy(renderer, asciialpha, &srcrect, &dstrect);
+        b++;
+        i++;
     }
     return i;
 }
