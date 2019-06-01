@@ -40,6 +40,7 @@ const uint8_t instruction_length[256] =
 #define BXN {0, MOD_XXXRM, 0}
 #define BX0 {0, MOD_XXXRM, 0}
 #define BX1 {0, MOD_XXXRM, 1}
+#define BX2 {0, MOD_XXXRM, 2}
 #define WSN {1, MOD_SEGRM, 0}
 #define WSW {1, MOD_SEGRM, RM_WRITE}
 
@@ -52,7 +53,7 @@ struct instruction_desc description[256] =
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BNN, BNN, BNN, BNN, BNN, BNN, UGH, UGH, BNN, BNN, BNN, BNN, UGH, UGH, UGH, UGH,
-  UGH /* flork */, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSW, UGH, WSN, UGH,
+  BX2, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BMN, WMN, WSW, UGH, WSN, UGH,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN,
   UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
@@ -74,13 +75,14 @@ struct instruction_desc description[256] =
 #undef BXN
 #undef BX0
 #undef BX1
+#undef BX2
 #undef WSN
 #undef WSW
 
 int instruction_rm_rw[6][8] = {
     { RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, RM_BOTH, -1, RM_BOTH },
     { RM_BOTH, RM_BOTH, RM_READ, RM_READ, RM_READ, RM_READ, RM_READ, -1 },
-    { -1, -1, -1, -1, -1, -1, -1, -1 },
+    { -1, -1, -1, -1, -1, -1, -1, RM_READ },
     { -1, -1, -1, -1, -1, -1, -1, -1 },
     { -1, -1, -1, -1, -1, -1, -1, -1 },
     { -1, -1, -1, -1, -1, -1, -1, -1 },
@@ -146,16 +148,42 @@ void take_instruction_byte_from_biu(struct iapx88 *cpu)
     check_segment_override(cpu, b);
 }
 
+/* Figure out the number of displacement bytes requested by the modregrm byte */
+int modregrm_disp_bytes(uint8_t modregrm)
+{
+    switch (modregrm & 0xC0) {
+    case 0:
+        if ((modregrm & 7) == 6)
+            return 2;
+        return 0;
+    case 0x40:
+        return 1;
+    case 0x80:
+        return 2;
+    case 0xC0:
+        return 0;
+    }
+    return 0;
+}
+
 int want_more_instruction_bytes(struct iapx88 *cpu)
 {
+    switch(cpu->cur_inst_read) {
+    case 0: return 1;
+    case 1: return cpu->cur_inst_len > 1;
+    case 2:
+        if (description[cpu->cur_inst[0]].mod >= MOD_REGRM)
+            cpu->cur_inst_len += modregrm_disp_bytes(cpu->cur_inst[1]);
+        break;
+    }
     return cpu->cur_inst_read < cpu->cur_inst_len;
 }
 
-void prefetch_queue_add(struct iapx88 *cpu) {
-    int index = (cpu->prefetch_start + cpu->prefetch_usage) & 3;
-    cpu->prefetch_queue[index] = cpu->data_pins;
-    cpu->prefetch_usage++;
-}
+/* void prefetch_queue_add(struct iapx88 *cpu) { */
+/*     int index = (cpu->prefetch_start + cpu->prefetch_usage) & 3; */
+/*     cpu->prefetch_queue[index] = cpu->data_pins; */
+/*     cpu->prefetch_usage++; */
+/* } */
 
 uint16_t word_from_bytes(uint8_t *bytes)
 {
@@ -393,6 +421,18 @@ int execute(struct iapx88 *cpu)
     case 0x7b:
         iapx88_update_flag_pf(cpu);
         cycles = branch(cpu, !(cpu->flags & FLAG_PF)); // JNP
+        break;
+    case 0x80:
+        switch(cpu->cur_inst[1] & 0x38) {
+        case 0x38: /* CMP modxxxr/m rm8, data */
+            set_flag(cpu, FLAG_AF, ((*cpu->operand_reg8 & 0xF) < (*cpu->operand_rm8 & 0xF)));
+            temp8 = *cpu->operand_rm8 - cpu->cur_inst[cpu->cur_inst_len-1];
+            set_flag(cpu, FLAG_CF, *cpu->operand_rm8 > cpu->cur_inst[cpu->cur_inst_len-1]);
+            set_flag(cpu, FLAG_OF, ((cpu->cur_inst[cpu->cur_inst_len-1] & 0x80) ^ (*cpu->operand_rm8 & 0x80)) & ((temp8 & 0x80) ^ (cpu->cur_inst[cpu->cur_inst_len-1])));
+            set_flags_pf_zf_sf_8(cpu, temp8);
+            cycles = 4;
+            break;
+        }
         break;
     case 0x8a: /* mov modregr/m to reg8 */
         *cpu->operand_reg8 = *cpu->operand_rm8;

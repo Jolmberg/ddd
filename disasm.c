@@ -34,7 +34,7 @@ char instr_format[256][20] =
     "mov al, $1i8", "mov cl, $1i8", "mov dl, $1i8", "mov bl, $1i8", "mov ah, $1i8", "mov ch, $1i8", "mov dh, $1i8", "mov bh, $1i8", "mov ax, $1i16", "mov cx, $1i16", "mov dx, $1i16", "mov bx, $1i16", "mov sp, $1i16", "mov bp, $1i16", "mov si, $1i16", "mov di, $1i16",
     "", "", "", "ret", "", "", "", "", "", "", "", "", "", "", "", "",
     "$1o0 $1n8, 1", "", "$1o0 $1n8, cl", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "loop $1b8", "", "in $1i8, al", "", "out $1i8, al", "out $1i8, ax", "", "jmp $1b16", "jmp $3i16:$1i16", "", "", "", "out dx, al", "out dx, ax",
+    "", "", "loop $1b8", "", "in $1i8, al", "", "out $1i8, al", "out $1i8, ax", "", "jmp $1b16", "jmp $3i16:$1i16", "jmp $1b8", "", "", "out dx, al", "out dx, ax",
     "", "", "", "", "", "", "", "", "clc", "stc", "cli", "", "", "", "$1o1 $1n8", "$1o1 $1n16"
 };
 
@@ -91,7 +91,7 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
     char *format = instr_format[mb_memory_peek(mb, segment, offset)];
     int operand_distance = 0;
     int max_distance = 0;
-    int modregrm, modxxxrm;
+    int modregrm;
     if (format[0] == '\0') {
         if (segment_override >= 0) {
             b = segment_override;
@@ -133,11 +133,11 @@ int sprint_instruction_at_address(char *buffer, struct motherboard *mb, uint16_t
                 buffer += sprintf(buffer, "%s", extended[list][number]);
                 format += 2;
             } else if (!strncmp(format, "n8", 2)) {
-                modxxxrm = mb_memory_peek(mb, segment, offset + operand);
-                buffer += sprint_modregrm_string(buffer, modxxxrm, 0, 0, 0, segment_override);
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
+                buffer += sprint_modregrm_string(buffer, modregrm, 0, 0, 0, segment_override);
                 format += 2;
             } else if (!strncmp(format, "n16", 3)) {
-                modxxxrm = mb_memory_peek(mb, segment, offset + operand);
+                modregrm = mb_memory_peek(mb, segment, offset + operand);
                 buffer += sprint_modregrm_string(buffer, modregrm, 1, 0, 0, segment_override);
                 format += 3;
             } else if (!strncmp(format, "m8", 2)) {

@@ -19,14 +19,14 @@ enum flags { FLAG_OF=0x800,
              FLAG_PF=0x4,
              FLAG_CF=0x1 };
 
-enum mod_type { MOD_NONE, MOD_REGRM, MOD_SEGRM, MOD_XXXRM, REG_REG, REG_SEG };
+enum mod_type { MOD_NONE = 0, REG_REG = 1, REG_SEG = 2, MOD_REGRM = 3, MOD_SEGRM = 4, MOD_XXXRM = 5 };
 enum rm_rw { RM_READ = 1, RM_WRITE = 2, RM_BOTH = 3};
+
 struct instruction_desc {
     int word;
     enum mod_type mod;
     int rm_rw; // Bit field of rm_rw enums or (for modxxxrm) index into the real rm_rw array.
 };
-
 
 struct iapx88 {
     // Registers

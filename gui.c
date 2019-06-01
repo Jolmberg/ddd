@@ -38,8 +38,8 @@ int gui_init()
     mb_load_bios_rom(mb, "BIOS_5150_24APR81_U33.BIN");
     mb_powerup(mb);
     debugger = debugger_create(mb);
-    debugger->breakpoint = 0xfe216;
-    return 0;    
+    debugger->breakpoint = 0xfe0f0; //0xfe216;
+    return 0;
 }
 
 void update_tex_title(SDL_Texture *screen)
