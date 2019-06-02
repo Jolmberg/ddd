@@ -24,7 +24,7 @@ const uint8_t instruction_length[256] =
   2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // mov reg, immediate
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 2, 1, 1, 1, 2, 2, 1, 3, 5, 1, 1, 1, 1, 1,
+  1, 1, 2, 1, 1, 1, 2, 2, 1, 3, 5, 2, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1 };
 
 #define UGH {2, MOD_NONE, 0}
@@ -59,8 +59,8 @@ struct instruction_desc description[256] =
   BRN, BRN, BRN, BRN, BRN, BRN, BRN, BRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN, WRN,
   UGH, UGH, UGH, BNN, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
   BX0, UGH, BX0, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH,
-  UGH, UGH, BNN, UGH, BNN, UGH, BNN, WNN, UGH, WNN, BNN, UGH, UGH, UGH, BNN, WNN,
-  UGH, UGH, UGH, UGH, UGH, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BX1, UGH };
+  UGH, UGH, BNN, UGH, BNN, UGH, BNN, WNN, UGH, WNN, BNN, BNN, UGH, UGH, BNN, WNN,
+  UGH, UGH, UGH, UGH, BNN, UGH, UGH, UGH, BNN, BNN, BNN, UGH, UGH, UGH, BX1, UGH };
 
 #undef UGH
 #undef BNN
@@ -565,6 +565,16 @@ int execute(struct iapx88 *cpu)
         cpu->ip = word_from_bytes(cpu->cur_inst + 1);
         cpu->jumped = 1;
         cycles = 15;
+        break;
+    case 0xEB: /* JMP direct within segment-short */
+        cpu->ip = cpu->ip + 2 + (int8_t)cpu->cur_inst[1];
+        cpu->jumped = 1;
+        cycles = 15;
+        break;
+    case 0xF4: /* hlt */
+        /* Do something! */
+        cycles = 2;
+        cpu->return_reason = WAIT_INTERRUPTIBLE;
         break;
     case 0xF8: /* CLC */
         set_flag(cpu, FLAG_CF, 0);

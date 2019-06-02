@@ -66,6 +66,7 @@ struct iapx88 {
     int cur_inst_len;
     uint16_t prefetch_ip;
     int jumped;
+    int halted;
     uint8_t *operand_reg8, *operand_rm8, *target8, *target8_2;
     uint16_t *operand_reg16, *operand_rm16, *target16, *target16_2;
 };
